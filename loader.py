@@ -19,15 +19,15 @@ limitations under the License.
 import os
 import sys
 import math
-import librosa
-import numpy
-from specaugment import spec_augment_pytorch
 import time
 import torch
 import random
 import threading
 import logging
 from torch.utils.data import Dataset, DataLoader
+import librosa
+import numpy
+from specaugment import spec_augment_pytorch
 
 logger = logging.getLogger('root')
 FORMAT = "[%(asctime)s %(filename)s:%(lineno)s - %(funcName)s()] %(message)s"
