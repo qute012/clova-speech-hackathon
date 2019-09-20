@@ -34,8 +34,6 @@ SM : Switchboard mild
 SS : Switchboard strong
 """
 
-import librosa
-import librosa.display
 import numpy as np
 import random
 from specaugment.sparse_image_warp_pytorch import sparse_image_warp
