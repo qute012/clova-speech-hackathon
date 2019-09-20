@@ -37,7 +37,6 @@ logger.setLevel(logging.INFO)
 PAD = 0
 N_FFT = 512
 SAMPLE_RATE = 16000
-use_specaug = True
 
 target_dict = dict()
 
@@ -49,7 +48,7 @@ def load_targets(path):
             target_dict[key] = target
 
 
-def get_spectrogram_feature(filepath,use_specaug):
+def get_spectrogram_feature(filepath):
     audio, sampling_rate = librosa.load(filepath)
 
     mel_spectrogram = librosa.feature.melspectrogram(y=audio,
@@ -65,6 +64,7 @@ def get_spectrogram_feature(filepath,use_specaug):
     mel_spectrogram = numpy.reshape(mel_spectrogram, (-1, shape[0], shape[1]))
     feat = torch.from_numpy(mel_spectrogram)
 
+    use_specaug = True
     if use_specaug:
         feat = spec_augment_pytorch.spec_augment(feat, time_warping_para=80, frequency_masking_para=54,
                                                  time_masking_para=100, frequency_mask_num=1, time_mask_num=1)
