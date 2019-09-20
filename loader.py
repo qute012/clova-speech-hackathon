@@ -19,7 +19,9 @@ limitations under the License.
 import os
 import sys
 import math
-import wavio
+import librosa
+import numpy
+from specaugment import spec_augment_pytorch
 import time
 import torch
 import random
@@ -38,30 +40,36 @@ SAMPLE_RATE = 16000
 
 target_dict = dict()
 
+
 def load_targets(path):
     with open(path, 'r') as f:
         for no, line in enumerate(f):
             key, target = line.strip().split(',')
             target_dict[key] = target
 
-def get_spectrogram_feature(filepath):
-    (rate, width, sig) = wavio.readwav(filepath)
-    sig = sig.ravel()
 
-    stft = torch.stft(torch.FloatTensor(sig),
-                        N_FFT,
-                        hop_length=int(0.01*SAMPLE_RATE),
-                        win_length=int(0.030*SAMPLE_RATE),
-                        window=torch.hamming_window(int(0.030*SAMPLE_RATE)),
-                        center=False,
-                        normalized=False,
-                        onesided=True)
+def get_spectrogram_feature(filepath,use_specaug):
+    audio, sampling_rate = librosa.load(filepath)
 
-    stft = (stft[:,:,0].pow(2) + stft[:,:,1].pow(2)).pow(0.5);
-    amag = stft.numpy();
-    feat = torch.FloatTensor(amag)
-    feat = torch.FloatTensor(feat).transpose(0, 1)
+    mel_spectrogram = librosa.feature.melspectrogram(y=audio,
+                                                     sr=SAMPLE_RATE,
+                                                     n_mels=512,
+                                                     hop_length=int(0.01*SAMPLE_RATE),
+                                                     win_length=int(0.030 * SAMPLE_RATE),
+                                                     window=torch.hamming_window(int(0.030 * SAMPLE_RATE)).numpy(),
+                                                     center=False)
 
+    # reshape spectrogram shape to [batch_size, time, frequency]
+    shape = mel_spectrogram.shape
+    mel_spectrogram = numpy.reshape(mel_spectrogram, (-1, shape[0], shape[1]))
+    feat = torch.from_numpy(mel_spectrogram)
+
+    if use_specaug:
+        feat = spec_augment_pytorch.spec_augment(feat, time_warping_para=80, frequency_masking_para=54,
+                                                 time_masking_para=100, frequency_mask_num=1, time_mask_num=1)
+
+    feat = feat.reshape([feat.shape[1], feat.shape[2]])
+    feat = numpy.transpose(feat)
     return feat
 
 def get_script(filepath, bos_id, eos_id):
