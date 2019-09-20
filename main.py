@@ -51,8 +51,8 @@ EOS_token = 0
 PAD_token = 0
 
 if HAS_DATASET == False:
-    #DATASET_PATH = './train'
-    DATASET_PATH = './sample_dataset'
+    DATASET_PATH = './train'
+    #DATASET_PATH = './sample_dataset'
 
 DATASET_PATH = os.path.join(DATASET_PATH, 'train')
 
@@ -308,8 +308,7 @@ def main():
     parser.add_argument('--save_name', type=str, default='model', help='the name of model in nsml or local')
     parser.add_argument('--mode', type=str, default='train')
     parser.add_argument("--pause", type=int, default=0)
-    parser.add_argument('--config', type=str, default='./config/v1_default.json')
-
+    parser.add_argument('--config', type=str, default='./config/legacy/cfg0/baseline.cfg0.json')
     args = parser.parse_args()
     cfg = config.utils.read_cfg(args.config)
 
