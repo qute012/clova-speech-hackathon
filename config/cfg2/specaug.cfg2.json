@@ -2,12 +2,12 @@
     "config_version": 2,
     "model":{
         "enc":{
-            "rnn_cell": "lstm",
+            "rnn_cell": "gru",
             "layer_size": 3
         },
         "dec":{
-            "rnn_cell": "lstm",
-            "layer_size": 2,
+            "rnn_cell": "gru",
+            "layer_size": 3,
             "use_attention": true,
             "max_len": 80
         },
@@ -24,7 +24,7 @@
             "time_masking_para": 100,
             "frequency_mask_num": 1,
             "time_mask_num": 1
-        },
+        }
     },
     "batch_size": 8,
     "workers": 2,

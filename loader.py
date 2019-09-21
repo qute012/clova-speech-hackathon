@@ -50,6 +50,11 @@ def load_targets(path):
 
 
 def get_spectrogram_feature(cfg_data, filepath, train_mode=False):
+
+    use_mel_scale = cfg_data["use_mel_scale"]
+    cfg_spec_augment = cfg_data["spec_augment"]
+    use_specaug = cfg_spec_augment["use"]
+    
     (rate, width, sig) = wavio.readwav(filepath)
     sig = sig.ravel()
 
@@ -63,23 +68,36 @@ def get_spectrogram_feature(cfg_data, filepath, train_mode=False):
                         normalized=False,
                         onesided=True)
 
-        amag = (stft[:,:,0].pow(2) + stft[:,:,1].pow(2)).pow(0.5)
-
-        amag = amag.view(-1, amag.shape[0], amag.shape[1])  # reshape spectrogram shape to [batch_size, time, frequency]
-        mel = torchaudio.transforms.MelScale(sample_rate=SAMPLE_RATE, n_mels=N_FFT//2+1)(amag)  # melspec with same shape
-
-        p = 1  # always augment
-        randp = numpy.random.uniform(0, 1)
-        do_aug = p > randp
-        if do_aug & train_mode:  # apply augment
-            mel = spec_augment_pytorch.spec_augment(mel, time_warping_para=80, frequency_masking_para=54,
-                                                     time_masking_para=100, frequency_mask_num=1, time_mask_num=1)
-        feat = mel.view(mel.shape[1], mel.shape[2])  # squeeze back to [frequency, time]
-        feat = feat.transpose(0, 1)
-
-    feat = torch.FloatTensor(feat)
+        stft = (stft[:,:,0].pow(2) + stft[:,:,1].pow(2)).pow(0.5)
+        if use_mel_scale:
+            amag = stft
+            amag = amag.view(-1, amag.shape[0], amag.shape[1])  # reshape spectrogram shape to [batch_size, time, frequency]
+            mel = torchaudio.transforms.MelScale(sample_rate=SAMPLE_RATE, n_mels=N_FFT//2+1)(amag)  # melspec with same shape
+            if use_specaug & train_mode:
+                specaug_prob = 1 # always augment
+                if numpy.random.uniform(0, 1) < specaug_prob:
+                    # apply SpecAugment
+                    mel = spec_augment_wrapper(mel, cfg_spec_augment)
+            feat = mel.view(mel.shape[1], mel.shape[2])  # squeeze back to [frequency, time]
+            feat = feat.transpose(0, 1)
+            feat = torch.FloatTensor(feat)
+        else:
+            # use baseline feature
+            amag = stft.numpy()
+            feat = torch.FloatTensor(amag)
+            feat = torch.FloatTensor(feat).transpose(0, 1)
+    
     return feat
 
+def spec_augment_wrapper(mel, cfg_spec_augment):
+    aug_mel = spec_augment_pytorch.spec_augment(
+        mel, 
+        time_warping_para=cfg_spec_augment["time_warping_para"],
+        frequency_masking_para=cfg_spec_augment["frequency_masking_para"],
+        time_masking_para=cfg_spec_augment["time_masking_para"],
+        frequency_mask_num=cfg_spec_augment["frequency_mask_num"],
+        time_mask_num=cfg_spec_augment["time_mask_num"])
+    return aug_mel
 
 def get_script(filepath, bos_id, eos_id):
     key = filepath.split('/')[-1].split('.')[0]
