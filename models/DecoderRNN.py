@@ -80,19 +80,20 @@ class DecoderRNN(BaseRNN):
     KEY_LENGTH = 'length'
     KEY_SEQUENCE = 'sequence'
 
-    def __init__(self, cfg_model, vocab_size, sos_id, eos_id, rnn_cell='gru'):
+    def __init__(self, cfg_model, vocab_size, sos_id, eos_id):
 
-        enc_n_layers = cfg_model["enc"]["layer_size"]
-
+        rnn_cell = cfg_model["dec"]["rnn_cell"]
         max_len = cfg_model["dec"]["max_len"]
         hidden_size = cfg_model["hidden_size"] * (2 if cfg_model["bidirectional"] else 1)
         n_layers = cfg_model["dec"]["layer_size"]
+        enc_n_layers = cfg_model["enc"]["layer_size"]
         bidirectional = cfg_model["bidirectional"]
         input_dropout_p = cfg_model["dropout"]
         dropout_p = cfg_model["dropout"]
         use_attention = cfg_model["dec"]["use_attention"]
 
         if enc_n_layers != n_layers:
+            # TODO: assume enc_n_layers > n_layers and slice?
             raise NotImplementedError("n_layer mismatch: cannot initialize decoder state")
 
         super(DecoderRNN, self).__init__(vocab_size, max_len, hidden_size,

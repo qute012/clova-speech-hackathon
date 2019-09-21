@@ -340,14 +340,12 @@ def main():
     enc = EncoderRNN(
             cfg["model"],
             feature_size,
-            rnn_cell='gru', 
             variable_lengths=False)
 
     dec = DecoderRNN(
             cfg["model"],
             len(char2index),
-            SOS_token, EOS_token,
-            rnn_cell='gru')
+            SOS_token, EOS_token)
 
     model = Seq2seq(enc, dec)
     model.flatten_parameters()
