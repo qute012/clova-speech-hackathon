@@ -106,3 +106,4 @@ venv.bak/
 # dataset
 train/
 train.tar
+.idea/
