@@ -29,6 +29,8 @@ from torch.utils.data import Dataset, DataLoader
 import numpy
 from specaugment import spec_augment_pytorch
 import torchaudio
+from pympler.tracker import SummaryTracker
+tracker = SummaryTracker()
 
 logger = logging.getLogger('root')
 FORMAT = "[%(asctime)s %(filename)s:%(lineno)s - %(funcName)s()] %(message)s"
@@ -60,10 +62,10 @@ def get_spectrogram_feature(filepath, train_mode):
                       center=False,
                       normalized=False,
                       onesided=True)
-    stft = (stft[:,:,0].pow(2) + stft[:,:,1].pow(2)).pow(0.5)
+    amag = (stft[:,:,0].pow(2) + stft[:,:,1].pow(2)).pow(0.5)
 
     # reshape spectrogram shape to [batch_size, time, frequency]
-    amag = stft.view(-1, stft.shape[0], stft.shape[1])
+    amag = amag.view(-1, amag.shape[0], amag.shape[1])
     # convert to mel scale with same shape
     feat = torchaudio.transforms.MelScale(sample_rate=SAMPLE_RATE, n_mels=N_FFT//2+1)(amag)
 
@@ -76,8 +78,10 @@ def get_spectrogram_feature(filepath, train_mode):
                                                  time_masking_para=100, frequency_mask_num=1, time_mask_num=1)
 
     # squeeze back to [frequency, time] and transpose
+    feat = torch.FloatTensor(feat)
     feat = feat.view(feat.shape[1], feat.shape[2])
     feat = feat.transpose(0, 1)
+    tracker.print_diff()
 
     return feat
 
