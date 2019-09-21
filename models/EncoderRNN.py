@@ -62,7 +62,7 @@ class EncoderRNN(BaseRNN):
         hidden_size = cfg_model["hidden_size"]
         input_dropout_p = cfg_model["dropout"]
         dropout_p = cfg_model["dropout"]
-        n_layers = cfg_model["layer_size"]
+        n_layers = cfg_model["enc"]["layer_size"]
         bidirectional = cfg_model["bidirectional"]
 
         super(EncoderRNN, self).__init__(0, 0, hidden_size,

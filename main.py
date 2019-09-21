@@ -236,7 +236,7 @@ def evaluate(model, dataloader, queue, criterion, device):
     return total_loss / total_num, total_dist / total_length
 
 
-def bind_model(model, optimizer=None):
+def bind_model(cfg_data, model, optimizer=None):
     def load(filename, **kwargs):
         state = torch.load(os.path.join(filename, 'model.pt'))
         model.load_state_dict(state['model'])
@@ -255,7 +255,7 @@ def bind_model(model, optimizer=None):
         model.eval()
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-        input = get_spectrogram_feature(wav_path).unsqueeze(0)
+        input = get_spectrogram_feature(cfg_data, wav_path).unsqueeze(0)
         input = input.to(device)
 
         logit = model(input_variable=input, input_lengths=None, teacher_forcing_ratio=0)
@@ -269,35 +269,36 @@ def bind_model(model, optimizer=None):
     nsml.bind(save=save, load=load, infer=infer) # 'nsml.bind' function must be called at the end.
 
 
-def split_dataset(config, wav_paths, script_paths, valid_ratio=0.05):
-    train_loader_count = config["workers"]
+def split_dataset(cfg, wav_paths, script_paths, valid_ratio=0.05):
+    train_loader_count = cfg["workers"]
     records_num = len(wav_paths)
-    batch_num = math.ceil(records_num / config["batch_size"])
+    batch_num = math.ceil(records_num / cfg["batch_size"])
 
     valid_batch_num = math.ceil(batch_num * valid_ratio)
     train_batch_num = batch_num - valid_batch_num
 
-    batch_num_per_train_loader = math.ceil(train_batch_num / config["workers"])
+    batch_num_per_train_loader = math.ceil(train_batch_num / cfg["workers"])
 
     train_begin = 0
     train_end_raw_id = 0
     train_dataset_list = list()
 
-    for i in range(config["workers"]):
+    for i in range(cfg["workers"]):
 
         train_end = min(train_begin + batch_num_per_train_loader, train_batch_num)
 
-        train_begin_raw_id = train_begin * config["batch_size"]
-        train_end_raw_id = train_end * config["batch_size"]
+        train_begin_raw_id = train_begin * cfg["batch_size"]
+        train_end_raw_id = train_end * cfg["batch_size"]
 
         train_dataset_list.append(BaseDataset(
+                                        cfg["data"],
                                         wav_paths[train_begin_raw_id:train_end_raw_id],
                                         script_paths[train_begin_raw_id:train_end_raw_id],
                                         SOS_token, EOS_token, train_mode=True))
 
         train_begin = train_end 
 
-    valid_dataset = BaseDataset(wav_paths[train_end_raw_id:], script_paths[train_end_raw_id:], SOS_token, EOS_token, train_mode=False)
+    valid_dataset = BaseDataset(cfg["data"], wav_paths[train_end_raw_id:], script_paths[train_end_raw_id:], SOS_token, EOS_token, train_mode=False)
 
     return train_batch_num, train_dataset_list, valid_dataset
 
@@ -359,7 +360,7 @@ def main():
     optimizer = optim.Adam(model.module.parameters(), lr=cfg["lr"])
     criterion = nn.CrossEntropyLoss(reduction='sum', ignore_index=PAD_token).to(device)
 
-    bind_model(model, optimizer)
+    bind_model(cfg["data"], model, optimizer)
 
     if args.pause == 1:
         nsml.paused(scope=locals())

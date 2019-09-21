@@ -3,18 +3,17 @@
     "model":{
         "enc":{
             "rnn_cell": "gru",
-            "hidden_size": 512,
             "layer_size": 3
         },
         "dec":{
             "rnn_cell": "gru",
-            "hidden_size": 512,
             "layer_size": 3,
             "use_attention": true,
             "max_len": 80
         },
+        "hidden_size": 512,
         "dropout": 0.2,
-        "bidirectional": 1
+        "bidirectional": true
     },
     "data":{
         "use_mel_scale": false,

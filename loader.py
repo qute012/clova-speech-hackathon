@@ -49,7 +49,7 @@ def load_targets(path):
             target_dict[key] = target
 
 
-def get_spectrogram_feature(filepath, train_mode=False):
+def get_spectrogram_feature(cfg_data, filepath, train_mode=False):
     (rate, width, sig) = wavio.readwav(filepath)
     sig = sig.ravel()
 
@@ -95,7 +95,8 @@ def get_script(filepath, bos_id, eos_id):
 
 
 class BaseDataset(Dataset):
-    def __init__(self, wav_paths, script_paths, bos_id=1307, eos_id=1308, train_mode=False):
+    def __init__(self, cfg_data, wav_paths, script_paths, bos_id=1307, eos_id=1308, train_mode=False):
+        self.cfg_data = cfg_data
         self.wav_paths = wav_paths
         self.script_paths = script_paths
         self.bos_id, self.eos_id = bos_id, eos_id
@@ -108,7 +109,7 @@ class BaseDataset(Dataset):
         return len(self.wav_paths)
 
     def getitem(self, idx):
-        feat = get_spectrogram_feature(self.wav_paths[idx], train_mode=self.train_mode)
+        feat = get_spectrogram_feature(self.cfg_data, self.wav_paths[idx], train_mode=self.train_mode)
         script = get_script(self.script_paths[idx], self.bos_id, self.eos_id)
         return feat, script
 

@@ -82,13 +82,18 @@ class DecoderRNN(BaseRNN):
 
     def __init__(self, cfg_model, vocab_size, sos_id, eos_id, rnn_cell='gru'):
 
-        max_len = cfg_model["max_len"]
+        enc_n_layers = cfg_model["enc"]["layer_size"]
+
+        max_len = cfg_model["dec"]["max_len"]
         hidden_size = cfg_model["hidden_size"] * (2 if cfg_model["bidirectional"] else 1)
-        n_layers = cfg_model["layer_size"]
+        n_layers = cfg_model["dec"]["layer_size"]
         bidirectional = cfg_model["bidirectional"]
         input_dropout_p = cfg_model["dropout"]
         dropout_p = cfg_model["dropout"]
-        use_attention = cfg_model["use_attention"]
+        use_attention = cfg_model["dec"]["use_attention"]
+
+        if enc_n_layers != n_layers:
+            raise NotImplementedError("n_layer mismatch: cannot initialize decoder state")
 
         super(DecoderRNN, self).__init__(vocab_size, max_len, hidden_size,
                 input_dropout_p, dropout_p,
