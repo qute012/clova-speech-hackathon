@@ -34,6 +34,8 @@ import torch.optim as optim
 import torch.nn.functional as F
 import torch.optim as optim
 import Levenshtein as Lev 
+from pympler.tracker import SummaryTracker
+tracker = SummaryTracker()
 
 import label_loader
 from loader import *
@@ -292,6 +294,7 @@ def split_dataset(config, wav_paths, script_paths, valid_ratio=0.05):
                                         wav_paths[train_begin_raw_id:train_end_raw_id],
                                         script_paths[train_begin_raw_id:train_end_raw_id],
                                         SOS_token, EOS_token, train_mode=True))
+
         train_begin = train_end 
 
     valid_dataset = BaseDataset(wav_paths[train_end_raw_id:], script_paths[train_end_raw_id:], SOS_token, EOS_token, train_mode=False)
@@ -390,6 +393,8 @@ def main():
     train_begin = time.time()
 
     for epoch in range(begin_epoch, cfg["max_epochs"]):
+
+        tracker.print_diff()
 
         train_queue = queue.Queue(cfg["workers"] * 2)
 
