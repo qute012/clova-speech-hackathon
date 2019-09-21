@@ -16,8 +16,11 @@
         "dropout": 0.2,
         "bidirectional": 1
     },
-    "spec_augment": {
-        "use": false
+    "data":{
+        "use_mel_scale": false,
+        "spec_augment": {
+            "use": false
+        }
     },
     "batch_size": 8,
     "workers": 2,
