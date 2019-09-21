@@ -28,7 +28,7 @@ import logging
 from torch.utils.data import Dataset, DataLoader
 import numpy
 from specaugment import spec_augment_pytorch
-import torchaudio
+#import torchaudio
 from pympler.tracker import SummaryTracker
 tracker = SummaryTracker()
 
@@ -54,33 +54,21 @@ def load_targets(path):
 def get_spectrogram_feature(filepath, train_mode):
     (rate, width, sig) = wavio.readwav(filepath)
     sig = sig.ravel()
+
     stft = torch.stft(torch.FloatTensor(sig),
-                      N_FFT,
-                      hop_length=int(0.01*SAMPLE_RATE),
-                      win_length=int(0.030*SAMPLE_RATE),
-                      window=torch.hamming_window(int(0.030*SAMPLE_RATE)),
-                      center=False,
-                      normalized=False,
-                      onesided=True)
-    amag = (stft[:,:,0].pow(2) + stft[:,:,1].pow(2)).pow(0.5)
+                        N_FFT,
+                        hop_length=int(0.01*SAMPLE_RATE),
+                        win_length=int(0.030*SAMPLE_RATE),
+                        window=torch.hamming_window(int(0.030*SAMPLE_RATE)),
+                        center=False,
+                        normalized=False,
+                        onesided=True)
 
-    # reshape spectrogram shape to [batch_size, time, frequency]
-    amag = amag.view(-1, amag.shape[0], amag.shape[1])
-    # convert to mel scale with same shape
-    feat = torchaudio.transforms.MelScale(sample_rate=SAMPLE_RATE, n_mels=N_FFT//2+1)(amag)
+    stft = (stft[:,:,0].pow(2) + stft[:,:,1].pow(2)).pow(0.5);
+    amag = stft.numpy();
+    feat = torch.FloatTensor(amag)
+    feat = torch.FloatTensor(feat).transpose(0, 1)
 
-    # apply augment
-    p = 1  # Always augment
-    randp = numpy.random.uniform(0, 1)
-    use_specaug = p > randp
-    if use_specaug & train_mode:
-        feat = spec_augment_pytorch.spec_augment(feat, time_warping_para=80, frequency_masking_para=54,
-                                                 time_masking_para=100, frequency_mask_num=1, time_mask_num=1)
-
-    # squeeze back to [frequency, time] and transpose
-    feat = torch.FloatTensor(feat)
-    feat = feat.view(feat.shape[1], feat.shape[2])
-    feat = feat.transpose(0, 1)
     tracker.print_diff()
 
     return feat
