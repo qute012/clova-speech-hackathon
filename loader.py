@@ -28,6 +28,7 @@ import logging
 from torch.utils.data import Dataset, DataLoader
 import numpy
 from specaugment import spec_augment_pytorch
+import torchaudio
 
 logger = logging.getLogger('root')
 FORMAT = "[%(asctime)s %(filename)s:%(lineno)s - %(funcName)s()] %(message)s"
@@ -48,33 +49,37 @@ def load_targets(path):
             target_dict[key] = target
 
 
-def get_spectrogram_feature(filepath):
+def get_spectrogram_feature(filepath, train_mode=False):
     (rate, width, sig) = wavio.readwav(filepath)
     sig = sig.ravel()
 
-    stft = torch.stft(torch.FloatTensor(sig),
-                        N_FFT,
-                        hop_length=int(0.01*SAMPLE_RATE),
-                        win_length=int(0.030*SAMPLE_RATE),
-                        window=torch.hamming_window(int(0.030*SAMPLE_RATE)),
+    with torch.no_grad(): # constant memory footprint
+        stft = torch.stft(torch.FloatTensor(sig),
+                          N_FFT,
+                          hop_length=int(0.01*SAMPLE_RATE),
+                          win_length=int(0.030*SAMPLE_RATE),
+                          window=torch.hamming_window(int(0.030*SAMPLE_RATE)),
                         center=False,
                         normalized=False,
                         onesided=True)
 
-    stft = (stft[:,:,0].pow(2) + stft[:,:,1].pow(2)).pow(0.5)
-    amag = stft.numpy()
-    # reshape spectrogram shape to [batch_size, time, frequency]
-    feat = numpy.reshape(amag, (-1, amag.shape[0], amag.shape[1]))
-    feat = torch.from_numpy(feat)
+        amag = (stft[:,:,0].pow(2) + stft[:,:,1].pow(2)).pow(0.5)
 
-    use_specaug = True
-    if use_specaug:
-        feat = spec_augment_pytorch.spec_augment(feat, time_warping_para=80, frequency_masking_para=54,
-                                                 time_masking_para=100, frequency_mask_num=1, time_mask_num=1)
+        amag = amag.view(-1, amag.shape[0], amag.shape[1])  # reshape spectrogram shape to [batch_size, time, frequency]
+        mel = torchaudio.transforms.MelScale(sample_rate=SAMPLE_RATE, n_mels=N_FFT//2+1)(amag)  # melspec with same shape
 
-    feat = feat.reshape([feat.shape[1], feat.shape[2]])
-    feat = numpy.transpose(feat)
+        p = 1  # always augment
+        randp = numpy.random.uniform(0, 1)
+        do_aug = p > randp
+        if do_aug & train_mode:  # apply augment
+            mel = spec_augment_pytorch.spec_augment(mel, time_warping_para=80, frequency_masking_para=54,
+                                                     time_masking_para=100, frequency_mask_num=1, time_mask_num=1)
+        feat = mel.view(mel.shape[1], mel.shape[2])  # squeeze back to [frequency, time]
+        feat = feat.transpose(0, 1)
+
+    feat = torch.FloatTensor(feat)
     return feat
+
 
 def get_script(filepath, bos_id, eos_id):
     key = filepath.split('/')[-1].split('.')[0]
@@ -88,11 +93,13 @@ def get_script(filepath, bos_id, eos_id):
     result.append(eos_id)
     return result
 
+
 class BaseDataset(Dataset):
-    def __init__(self, wav_paths, script_paths, bos_id=1307, eos_id=1308):
+    def __init__(self, wav_paths, script_paths, bos_id=1307, eos_id=1308, train_mode=False):
         self.wav_paths = wav_paths
         self.script_paths = script_paths
         self.bos_id, self.eos_id = bos_id, eos_id
+        self.train_mode = train_mode
 
     def __len__(self):
         return len(self.wav_paths)
@@ -101,9 +108,10 @@ class BaseDataset(Dataset):
         return len(self.wav_paths)
 
     def getitem(self, idx):
-        feat = get_spectrogram_feature(self.wav_paths[idx])
+        feat = get_spectrogram_feature(self.wav_paths[idx], train_mode=self.train_mode)
         script = get_script(self.script_paths[idx], self.bos_id, self.eos_id)
         return feat, script
+
 
 def _collate_fn(batch):
     def seq_length_(p):
@@ -138,6 +146,7 @@ def _collate_fn(batch):
         targets[x].narrow(0, 0, len(target)).copy_(torch.LongTensor(target))
 
     return seqs, targets, seq_lengths, target_lengths
+
 
 class BaseDataLoader(threading.Thread):
     def __init__(self, dataset, queue, batch_size, thread_id):
@@ -182,6 +191,7 @@ class BaseDataLoader(threading.Thread):
             batch = self.collate_fn(items)
             self.queue.put(batch)
         logger.debug('loader %d stop' % (self.thread_id))
+
 
 class MultiLoader():
     def __init__(self, dataset_list, queue, batch_size, worker_size):
