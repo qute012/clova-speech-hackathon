@@ -56,6 +56,7 @@ if HAS_DATASET == False:
 
 DATASET_PATH = os.path.join(DATASET_PATH, 'train')
 
+
 def label_to_string(labels):
     if len(labels.shape) == 1:
         sent = str()
@@ -77,6 +78,7 @@ def label_to_string(labels):
 
         return sents
 
+
 def char_distance(ref, hyp):
     ref = ref.replace(' ', '') 
     hyp = hyp.replace(' ', '') 
@@ -85,6 +87,7 @@ def char_distance(ref, hyp):
     length = len(ref.replace(' ', ''))
 
     return dist, length 
+
 
 def get_distance(ref_labels, hyp_labels, display=False):
     total_dist = 0
@@ -230,6 +233,7 @@ def evaluate(model, dataloader, queue, criterion, device):
     logger.info('evaluate() completed')
     return total_loss / total_num, total_dist / total_length
 
+
 def bind_model(model, optimizer=None):
     def load(filename, **kwargs):
         state = torch.load(os.path.join(filename, 'model.pt'))
@@ -262,6 +266,7 @@ def bind_model(model, optimizer=None):
 
     nsml.bind(save=save, load=load, infer=infer) # 'nsml.bind' function must be called at the end.
 
+
 def split_dataset(config, wav_paths, script_paths, valid_ratio=0.05):
     train_loader_count = config["workers"]
     records_num = len(wav_paths)
@@ -286,12 +291,13 @@ def split_dataset(config, wav_paths, script_paths, valid_ratio=0.05):
         train_dataset_list.append(BaseDataset(
                                         wav_paths[train_begin_raw_id:train_end_raw_id],
                                         script_paths[train_begin_raw_id:train_end_raw_id],
-                                        SOS_token, EOS_token))
+                                        SOS_token, EOS_token, train_mode=True))
         train_begin = train_end 
 
-    valid_dataset = BaseDataset(wav_paths[train_end_raw_id:], script_paths[train_end_raw_id:], SOS_token, EOS_token)
+    valid_dataset = BaseDataset(wav_paths[train_end_raw_id:], script_paths[train_end_raw_id:], SOS_token, EOS_token, train_mode=False)
 
     return train_batch_num, train_dataset_list, valid_dataset
+
 
 def main():
 
@@ -405,8 +411,8 @@ def main():
         valid_loader.join()
 
         nsml.report(False,
-            step=epoch, train_epoch__loss=train_loss, train_epoch__cer=train_cer,
-            eval__loss=eval_loss, eval__cer=eval_cer)
+                    step=epoch, train_epoch__loss=train_loss, train_epoch__cer=train_cer,
+                    eval__loss=eval_loss, eval__cer=eval_cer)
 
         best_model = (eval_loss < best_loss)
         nsml.save(args.save_name)
@@ -414,6 +420,7 @@ def main():
         if best_model:
             nsml.save('best')
             best_loss = eval_loss
+
 
 if __name__ == "__main__":
     main()

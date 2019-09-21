@@ -1,3 +1,7 @@
 sample_dataset/
 train/
 train.tar
+testspace.py
+.idea
+__pycache__
+docs/
