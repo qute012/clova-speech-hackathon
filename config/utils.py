@@ -11,9 +11,11 @@ def update_cfg(cfg):
     if cfg["config_version"] == 0:
         cfg = makeVer1(cfg)
     if cfg["config_version"] == 1:
+        cfg = makeVer2(cfg)
+    if cfg["config_version"] == 2:
         return cfg
     else:
-        raise ValueError # unreachable state
+        raise NotImplementedError # handle newer version
 
 def makeVer1(old):
     cfg = {}
@@ -34,3 +36,6 @@ def makeVer1(old):
     cfg["lr"] = old["lr"]
     cfg["teacher_forcing"] = old["teacher_forcing"]
     return cfg
+
+def makeVer2(old):
+    raise NotImplementedError
