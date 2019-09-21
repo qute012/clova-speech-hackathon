@@ -203,7 +203,6 @@ class MultiLoader():
 
         for i in range(self.worker_size):
             self.loader.append(BaseDataLoader(self.dataset_list[i], self.queue, self.batch_size, i))
-            print(sys.getsizeof(self.loader))  # DEBUG
 
     def start(self):
         for i in range(self.worker_size):
