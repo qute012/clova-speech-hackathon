@@ -27,8 +27,8 @@ import threading
 import logging
 from torch.utils.data import Dataset, DataLoader
 import numpy
-from specaugment import spec_augment_pytorch
-import torchaudio
+from specaugment import spec_augment_pytorch, melscale_pytorch
+
 
 logger = logging.getLogger('root')
 FORMAT = "[%(asctime)s %(filename)s:%(lineno)s - %(funcName)s()] %(message)s"
@@ -53,31 +53,32 @@ def get_spectrogram_feature(filepath, train_mode=False):
     (rate, width, sig) = wavio.readwav(filepath)
     sig = sig.ravel()
 
-    with torch.no_grad(): # constant memory footprint
-        stft = torch.stft(torch.FloatTensor(sig),
-                          N_FFT,
-                          hop_length=int(0.01*SAMPLE_RATE),
-                          win_length=int(0.030*SAMPLE_RATE),
-                          window=torch.hamming_window(int(0.030*SAMPLE_RATE)),
-                        center=False,
-                        normalized=False,
-                        onesided=True)
+    stft = torch.stft(torch.FloatTensor(sig),
+                      N_FFT,
+                      hop_length=int(0.01*SAMPLE_RATE),
+                      win_length=int(0.030*SAMPLE_RATE),
+                      window=torch.hamming_window(int(0.030*SAMPLE_RATE)),
+                      center=False,
+                      normalized=False,
+                      onesided=True)
 
-        amag = (stft[:,:,0].pow(2) + stft[:,:,1].pow(2)).pow(0.5)
+    stft = (stft[:,:,0].pow(2) + stft[:,:,1].pow(2)).pow(0.5)
 
-        amag = amag.view(-1, amag.shape[0], amag.shape[1])  # reshape spectrogram shape to [batch_size, time, frequency]
-        mel = torchaudio.transforms.MelScale(sample_rate=SAMPLE_RATE, n_mels=N_FFT//2+1)(amag)  # melspec with same shape
+    amag = stft.clone().detach()
 
-        p = 1  # always augment
-        randp = numpy.random.uniform(0, 1)
-        do_aug = p > randp
-        if do_aug & train_mode:  # apply augment
-            mel = spec_augment_pytorch.spec_augment(mel, time_warping_para=80, frequency_masking_para=54,
-                                                     time_masking_para=100, frequency_mask_num=1, time_mask_num=1)
-        feat = mel.view(mel.shape[1], mel.shape[2])  # squeeze back to [frequency, time]
-        feat = feat.transpose(0, 1)
+    amag = amag.view(-1, amag.shape[0], amag.shape[1])  # reshape spectrogram shape to [batch_size, time, frequency]
+    mel = melscale_pytorch.mel_scale(amag, sample_rate=SAMPLE_RATE, n_mels=N_FFT//2+1)  # melspec with same shape
 
-    feat = torch.FloatTensor(feat)
+    p = 1  # augment probability
+    randp = numpy.random.uniform(0, 1)
+    do_aug = p > randp
+    if do_aug & train_mode:  # apply augment
+        mel = spec_augment_pytorch.spec_augment(mel, time_warping_para=80, frequency_masking_para=54,
+                                                time_masking_para=100, frequency_mask_num=1, time_mask_num=1)
+    feat = mel.view(mel.shape[1], mel.shape[2])  # squeeze back to [frequency, time]
+    feat = feat.transpose(0, 1).clone().detach()
+
+    del stft, amag, mel
     return feat
 
 

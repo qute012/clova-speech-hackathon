@@ -27,64 +27,6 @@ import torch
 # from torch.utils.data import Dataset
 
 
-def time_warp(spec, W=5):
-    spec = spec.view(1, spec.shape[0], spec.shape[1])
-    num_rows = spec.shape[1]
-    spec_len = spec.shape[2]
-
-    y = num_rows // 2
-    horizontal_line_at_ctr = spec[0][y]
-    assert len(horizontal_line_at_ctr) == spec_len
-
-    point_to_warp = horizontal_line_at_ctr[random.randrange(W, spec_len - W)]
-    assert isinstance(point_to_warp, torch.Tensor)
-
-    # Uniform distribution from (0,W) with chance to be up to W negative
-    dist_to_warp = random.randrange(-W, W)
-    src_pts, dest_pts = torch.tensor([[[y, point_to_warp]]]), torch.tensor([[[y, point_to_warp + dist_to_warp]]])
-    warped_spectro, dense_flows = sparse_image_warp(spec, src_pts, dest_pts)
-    return warped_spectro.squeeze(3)
-
-
-def freq_mask(spec, F=15, num_masks=1, replace_with_zero=False):
-    cloned = spec.clone()
-    num_mel_channels = cloned.shape[1]
-
-    for i in range(0, num_masks):
-        f = random.randrange(0, F)
-        f_zero = random.randrange(0, num_mel_channels - f)
-
-        # avoids randrange error if values are equal and range is empty
-        if (f_zero == f_zero + f): return cloned
-
-        mask_end = random.randrange(f_zero, f_zero + f)
-        if (replace_with_zero):
-            cloned[0][f_zero:mask_end] = 0
-        else:
-            cloned[0][f_zero:mask_end] = cloned.mean()
-
-    return cloned
-
-
-def time_mask(spec, T=15, num_masks=1, replace_with_zero=False):
-    cloned = spec.clone()
-    len_spectro = cloned.shape[2]
-
-    for i in range(0, num_masks):
-        t = random.randrange(0, T)
-        t_zero = random.randrange(0, len_spectro - t)
-
-        # avoids randrange error if values are equal and range is empty
-        if (t_zero == t_zero + t): return cloned
-
-        mask_end = random.randrange(t_zero, t_zero + t)
-        if (replace_with_zero):
-            cloned[0][:, t_zero:mask_end] = 0
-        else:
-            cloned[0][:, t_zero:mask_end] = cloned.mean()
-    return cloned
-
-
 def sparse_image_warp(img_tensor,
                       source_control_point_locations,
                       dest_control_point_locations,
@@ -95,6 +37,7 @@ def sparse_image_warp(img_tensor,
 
     batch_size, image_height, image_width = img_tensor.shape
     grid_locations = get_grid_locations(image_height, image_width)
+
     flattened_grid_locations = torch.tensor(flatten_grid_locations(grid_locations, image_height, image_width))
 
     flattened_flows = interpolate_spline(
@@ -105,9 +48,12 @@ def sparse_image_warp(img_tensor,
         regularization_weight)
 
     dense_flows = create_dense_flows(flattened_flows, batch_size, image_height, image_width)
+    dense_flows.detach()
 
     warped_image = dense_image_warp(img_tensor, dense_flows)
+    warped_image.detach()
 
+    del flattened_grid_locations, grid_locations, flattened_flows
     return warped_image, dense_flows
 
 
