@@ -59,7 +59,7 @@ class EncoderRNN(BaseRNN):
 
     def __init__(self, cfg_model, feature_size, variable_lengths=False):
 
-        rnn_cell = cfg_model["enc"]["rnn_cell"]
+        rnn_cell = cfg_model["rnn_cell"]
         hidden_size = cfg_model["hidden_size"]
         input_dropout_p = cfg_model["dropout"]
         dropout_p = cfg_model["dropout"]

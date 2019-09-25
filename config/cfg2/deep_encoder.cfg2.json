@@ -2,16 +2,15 @@
     "config_version": 2,
     "model":{
         "enc":{
-            "rnn_cell": "lstm",
-            "layer_size": 2
+            "layer_size": 4
         },
         "dec":{
-            "rnn_cell": "lstm",
             "layer_size": 2,
             "use_attention": true,
             "max_len": 80
         },
-        "hidden_size": 128,
+        "rnn_cell": "gru",
+        "hidden_size": 512,
         "dropout": 0.2,
         "bidirectional": true
     },

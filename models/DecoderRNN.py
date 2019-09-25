@@ -82,7 +82,7 @@ class DecoderRNN(BaseRNN):
 
     def __init__(self, cfg_model, vocab_size, sos_id, eos_id):
 
-        rnn_cell = cfg_model["dec"]["rnn_cell"]
+        rnn_cell = cfg_model["rnn_cell"]
         max_len = cfg_model["dec"]["max_len"]
         hidden_size = cfg_model["hidden_size"] * (2 if cfg_model["bidirectional"] else 1)
         n_layers = cfg_model["dec"]["layer_size"]

@@ -2,15 +2,14 @@
     "config_version": 2,
     "model":{
         "enc":{
-            "rnn_cell": "gru",
             "layer_size": 3
         },
         "dec":{
-            "rnn_cell": "gru",
-            "layer_size": 2,
+            "layer_size": 3,
             "use_attention": true,
             "max_len": 80
         },
+        "rnn_cell": "gru",
         "hidden_size": 512,
         "dropout": 0.2,
         "bidirectional": true
@@ -21,7 +20,7 @@
             "use": false
         }
     },
-    "batch_size": 2,
+    "batch_size": 4,
     "workers": 2,
     "max_epochs": 30,
     "lr": 1e-04,

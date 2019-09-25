@@ -45,18 +45,17 @@ def makeVer2(old):
     old_model = old["model"]
         #<ENC>
     enc = {}
-    enc["rnn_cell"] = "gru"
     enc["layer_size"] = old_model["layer_size"]
     model["enc"] = enc
         #</ENC>
         #<DEC>
     dec = {}
-    dec["rnn_cell"] = "gru"
     dec["layer_size"] = old_model["layer_size"]
     dec["use_attention"] = old_model["use_attention"]
     dec["max_len"] = old_model["max_len"]
     model["dec"] = dec
         #</DEC>
+    model["rnn_cell"] = "gru"
     model["hidden_size"] = old_model["hidden_size"]
     model["dropout"] = old_model["dropout"]
     model["bidirectional"] = old_model["bidirectional"]
