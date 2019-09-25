@@ -66,7 +66,7 @@ def get_spectrogram_feature(cfg_data, filepath, train_mode=False):
                       normalized=False,
                       onesided=True)
     stft = (stft[:,:,0].pow(2) + stft[:,:,1].pow(2)).pow(0.5)
-    
+
     if use_mel_scale:
         amag = stft.clone().detach()
         amag = amag.view(-1, amag.shape[0], amag.shape[1])  # reshape spectrogram shape to [batch_size, time, frequency]
@@ -85,6 +85,7 @@ def get_spectrogram_feature(cfg_data, filepath, train_mode=False):
         amag = stft.numpy()
         feat = torch.FloatTensor(amag)
         feat = torch.FloatTensor(feat).transpose(0, 1)
+        del stft, amag
 
     return feat
 

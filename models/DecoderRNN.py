@@ -92,6 +92,9 @@ class DecoderRNN(BaseRNN):
         dropout_p = cfg_model["dropout"]
         use_attention = cfg_model["dec"]["use_attention"]
 
+
+        self.enc_n_layers = enc_n_layers
+
         if enc_n_layers != n_layers:
             # TODO: assume enc_n_layers > n_layers and slice?
             raise NotImplementedError("n_layer mismatch: cannot initialize decoder state")
@@ -143,6 +146,7 @@ class DecoderRNN(BaseRNN):
 
         inputs, batch_size, max_length = self._validate_args(inputs, encoder_hidden, encoder_outputs,
                                                              function, teacher_forcing_ratio)
+
         decoder_hidden = self._init_state(encoder_hidden)
 
         use_teacher_forcing = True if random.random() < teacher_forcing_ratio else False
@@ -201,6 +205,7 @@ class DecoderRNN(BaseRNN):
             encoder_hidden = tuple([self._cat_directions(h) for h in encoder_hidden])
         else:
             encoder_hidden = self._cat_directions(encoder_hidden)
+            # (n_layer, batch, dirs * hidden)
         return encoder_hidden
 
     def _cat_directions(self, h):

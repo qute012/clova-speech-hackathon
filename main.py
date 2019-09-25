@@ -185,6 +185,7 @@ def train(model, total_batch_size, queue, criterion, optimizer, device, train_be
                         step=train.cumulative_batch_count, train_step__loss=total_loss/total_num,
                         train_step__cer=total_dist/total_length)
         batch += 1
+        torch.cuda.empty_cache()
         train.cumulative_batch_count += 1
 
     logger.info('train() completed')
