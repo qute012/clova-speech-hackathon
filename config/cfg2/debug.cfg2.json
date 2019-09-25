@@ -7,7 +7,7 @@
         },
         "dec":{
             "rnn_cell": "gru",
-            "layer_size": 3,
+            "layer_size": 2,
             "use_attention": true,
             "max_len": 80
         },
@@ -21,7 +21,7 @@
             "use": false
         }
     },
-    "batch_size": 8,
+    "batch_size": 2,
     "workers": 2,
     "max_epochs": 30,
     "lr": 1e-04,

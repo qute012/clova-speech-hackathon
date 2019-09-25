@@ -93,11 +93,11 @@ class DecoderRNN(BaseRNN):
         use_attention = cfg_model["dec"]["use_attention"]
 
 
-        self.enc_n_layers = enc_n_layers
+        self.n_layers = n_layers
 
-        if enc_n_layers != n_layers:
+        if enc_n_layers < n_layers:
             # TODO: assume enc_n_layers > n_layers and slice?
-            raise NotImplementedError("n_layer mismatch: cannot initialize decoder state")
+            raise NotImplementedError("encoder must be at least as deep as decoder")
 
         super(DecoderRNN, self).__init__(vocab_size, max_len, hidden_size,
                 input_dropout_p, dropout_p,
@@ -205,6 +205,8 @@ class DecoderRNN(BaseRNN):
             encoder_hidden = tuple([self._cat_directions(h) for h in encoder_hidden])
         else:
             encoder_hidden = self._cat_directions(encoder_hidden)
+            if self.n_layers < encoder_hidden.size(0):
+                encoder_hidden = encoder_hidden[:self.n_layers,:,:]
             # (n_layer, batch, dirs * hidden)
         return encoder_hidden
 
