@@ -57,12 +57,13 @@ class EncoderRNN(BaseRNN):
 
     """
 
-    def __init__(self, cfg_model, feature_size, rnn_cell='gru', variable_lengths=False):
+    def __init__(self, cfg_model, feature_size, variable_lengths=False):
 
+        rnn_cell = cfg_model["rnn_cell"]
         hidden_size = cfg_model["hidden_size"]
         input_dropout_p = cfg_model["dropout"]
         dropout_p = cfg_model["dropout"]
-        n_layers = cfg_model["layer_size"]
+        n_layers = cfg_model["enc"]["layer_size"]
         bidirectional = cfg_model["bidirectional"]
 
         super(EncoderRNN, self).__init__(0, 0, hidden_size,

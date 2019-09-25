@@ -80,15 +80,24 @@ class DecoderRNN(BaseRNN):
     KEY_LENGTH = 'length'
     KEY_SEQUENCE = 'sequence'
 
-    def __init__(self, cfg_model, vocab_size, sos_id, eos_id, rnn_cell='gru'):
+    def __init__(self, cfg_model, vocab_size, sos_id, eos_id):
 
-        max_len = cfg_model["max_len"]
+        rnn_cell = cfg_model["rnn_cell"]
+        max_len = cfg_model["dec"]["max_len"]
         hidden_size = cfg_model["hidden_size"] * (2 if cfg_model["bidirectional"] else 1)
-        n_layers = cfg_model["layer_size"]
+        n_layers = cfg_model["dec"]["layer_size"]
+        enc_n_layers = cfg_model["enc"]["layer_size"]
         bidirectional = cfg_model["bidirectional"]
         input_dropout_p = cfg_model["dropout"]
         dropout_p = cfg_model["dropout"]
-        use_attention = cfg_model["use_attention"]
+        use_attention = cfg_model["dec"]["use_attention"]
+
+
+        self.n_layers = n_layers
+
+        if enc_n_layers < n_layers:
+            # TODO: assume enc_n_layers > n_layers and slice?
+            raise NotImplementedError("encoder must be at least as deep as decoder")
 
         super(DecoderRNN, self).__init__(vocab_size, max_len, hidden_size,
                 input_dropout_p, dropout_p,
@@ -137,6 +146,7 @@ class DecoderRNN(BaseRNN):
 
         inputs, batch_size, max_length = self._validate_args(inputs, encoder_hidden, encoder_outputs,
                                                              function, teacher_forcing_ratio)
+
         decoder_hidden = self._init_state(encoder_hidden)
 
         use_teacher_forcing = True if random.random() < teacher_forcing_ratio else False
@@ -203,6 +213,8 @@ class DecoderRNN(BaseRNN):
         """
         if self.bidirectional_encoder:
             h = torch.cat([h[0:h.size(0):2], h[1:h.size(0):2]], 2)
+        if self.n_layers < h.size(0):
+            h = h[:self.n_layers] # (n_layer, batch, dirs * hidden)
         return h
 
     def _validate_args(self, inputs, encoder_hidden, encoder_outputs, function, teacher_forcing_ratio):

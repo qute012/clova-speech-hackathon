@@ -34,6 +34,8 @@ import torch.optim as optim
 import torch.nn.functional as F
 import torch.optim as optim
 import Levenshtein as Lev 
+from pympler.tracker import SummaryTracker
+tracker = SummaryTracker()
 
 import label_loader
 from loader import *
@@ -56,6 +58,7 @@ if HAS_DATASET == False:
 
 DATASET_PATH = os.path.join(DATASET_PATH, 'train')
 
+
 def label_to_string(labels):
     if len(labels.shape) == 1:
         sent = str()
@@ -77,6 +80,7 @@ def label_to_string(labels):
 
         return sents
 
+
 def char_distance(ref, hyp):
     ref = ref.replace(' ', '') 
     hyp = hyp.replace(' ', '') 
@@ -85,6 +89,7 @@ def char_distance(ref, hyp):
     length = len(ref.replace(' ', ''))
 
     return dist, length 
+
 
 def get_distance(ref_labels, hyp_labels, display=False):
     total_dist = 0
@@ -180,7 +185,9 @@ def train(model, total_batch_size, queue, criterion, optimizer, device, train_be
                         step=train.cumulative_batch_count, train_step__loss=total_loss/total_num,
                         train_step__cer=total_dist/total_length)
         batch += 1
+        torch.cuda.empty_cache() # not much overhead, much safer
         train.cumulative_batch_count += 1
+
 
     logger.info('train() completed')
     return total_loss / total_num, total_dist / total_length
@@ -230,7 +237,8 @@ def evaluate(model, dataloader, queue, criterion, device):
     logger.info('evaluate() completed')
     return total_loss / total_num, total_dist / total_length
 
-def bind_model(model, optimizer=None):
+
+def bind_model(cfg_data, model, optimizer=None):
     def load(filename, **kwargs):
         state = torch.load(os.path.join(filename, 'model.pt'))
         model.load_state_dict(state['model'])
@@ -249,7 +257,7 @@ def bind_model(model, optimizer=None):
         model.eval()
         device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-        input = get_spectrogram_feature(wav_path).unsqueeze(0)
+        input = get_spectrogram_feature(cfg_data, wav_path).unsqueeze(0)
         input = input.to(device)
 
         logit = model(input_variable=input, input_lengths=None, teacher_forcing_ratio=0)
@@ -262,36 +270,40 @@ def bind_model(model, optimizer=None):
 
     nsml.bind(save=save, load=load, infer=infer) # 'nsml.bind' function must be called at the end.
 
-def split_dataset(config, wav_paths, script_paths, valid_ratio=0.05):
-    train_loader_count = config["workers"]
+
+def split_dataset(cfg, wav_paths, script_paths, valid_ratio=0.05):
+    train_loader_count = cfg["workers"]
     records_num = len(wav_paths)
-    batch_num = math.ceil(records_num / config["batch_size"])
+    batch_num = math.ceil(records_num / cfg["batch_size"])
 
     valid_batch_num = math.ceil(batch_num * valid_ratio)
     train_batch_num = batch_num - valid_batch_num
 
-    batch_num_per_train_loader = math.ceil(train_batch_num / config["workers"])
+    batch_num_per_train_loader = math.ceil(train_batch_num / cfg["workers"])
 
     train_begin = 0
     train_end_raw_id = 0
     train_dataset_list = list()
 
-    for i in range(config["workers"]):
+    for i in range(cfg["workers"]):
 
         train_end = min(train_begin + batch_num_per_train_loader, train_batch_num)
 
-        train_begin_raw_id = train_begin * config["batch_size"]
-        train_end_raw_id = train_end * config["batch_size"]
+        train_begin_raw_id = train_begin * cfg["batch_size"]
+        train_end_raw_id = train_end * cfg["batch_size"]
 
         train_dataset_list.append(BaseDataset(
+                                        cfg["data"],
                                         wav_paths[train_begin_raw_id:train_end_raw_id],
                                         script_paths[train_begin_raw_id:train_end_raw_id],
-                                        SOS_token, EOS_token))
+                                        SOS_token, EOS_token, train_mode=True))
+
         train_begin = train_end 
 
-    valid_dataset = BaseDataset(wav_paths[train_end_raw_id:], script_paths[train_end_raw_id:], SOS_token, EOS_token)
+    valid_dataset = BaseDataset(cfg["data"], wav_paths[train_end_raw_id:], script_paths[train_end_raw_id:], SOS_token, EOS_token, train_mode=False)
 
     return train_batch_num, train_dataset_list, valid_dataset
+
 
 def main():
 
@@ -330,14 +342,12 @@ def main():
     enc = EncoderRNN(
             cfg["model"],
             feature_size,
-            rnn_cell='gru', 
             variable_lengths=False)
 
     dec = DecoderRNN(
             cfg["model"],
             len(char2index),
-            SOS_token, EOS_token,
-            rnn_cell='gru')
+            SOS_token, EOS_token)
 
     model = Seq2seq(enc, dec)
     model.flatten_parameters()
@@ -350,7 +360,7 @@ def main():
     optimizer = optim.Adam(model.module.parameters(), lr=cfg["lr"])
     criterion = nn.CrossEntropyLoss(reduction='sum', ignore_index=PAD_token).to(device)
 
-    bind_model(model, optimizer)
+    bind_model(cfg["data"], model, optimizer)
 
     if args.pause == 1:
         nsml.paused(scope=locals())
@@ -385,6 +395,8 @@ def main():
 
     for epoch in range(begin_epoch, cfg["max_epochs"]):
 
+        tracker.print_diff()
+
         train_queue = queue.Queue(cfg["workers"] * 2)
 
         train_loader = MultiLoader(train_dataset_list, train_queue, cfg["batch_size"], cfg["workers"])
@@ -405,8 +417,8 @@ def main():
         valid_loader.join()
 
         nsml.report(False,
-            step=epoch, train_epoch__loss=train_loss, train_epoch__cer=train_cer,
-            eval__loss=eval_loss, eval__cer=eval_cer)
+                    step=epoch, train_epoch__loss=train_loss, train_epoch__cer=train_cer,
+                    eval__loss=eval_loss, eval__cer=eval_cer)
 
         best_model = (eval_loss < best_loss)
         nsml.save(args.save_name)
@@ -414,6 +426,7 @@ def main():
         if best_model:
             nsml.save('best')
             best_loss = eval_loss
+
 
 if __name__ == "__main__":
     main()

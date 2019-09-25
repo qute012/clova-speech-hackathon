@@ -26,6 +26,9 @@ import random
 import threading
 import logging
 from torch.utils.data import Dataset, DataLoader
+import numpy
+from specaugment import spec_augment_pytorch, melscale_pytorch
+
 
 logger = logging.getLogger('root')
 FORMAT = "[%(asctime)s %(filename)s:%(lineno)s - %(funcName)s()] %(message)s"
@@ -38,31 +41,63 @@ SAMPLE_RATE = 16000
 
 target_dict = dict()
 
+
 def load_targets(path):
     with open(path, 'r') as f:
         for no, line in enumerate(f):
             key, target = line.strip().split(',')
             target_dict[key] = target
 
-def get_spectrogram_feature(filepath):
+
+def get_spectrogram_feature(cfg_data, filepath, train_mode=False):
+
+    use_mel_scale = cfg_data["use_mel_scale"]
+    cfg_spec_augment = cfg_data["spec_augment"]
+    use_specaug = cfg_spec_augment["use"]
+    
     (rate, width, sig) = wavio.readwav(filepath)
     sig = sig.ravel()
-
     stft = torch.stft(torch.FloatTensor(sig),
-                        N_FFT,
-                        hop_length=int(0.01*SAMPLE_RATE),
-                        win_length=int(0.030*SAMPLE_RATE),
-                        window=torch.hamming_window(int(0.030*SAMPLE_RATE)),
-                        center=False,
-                        normalized=False,
-                        onesided=True)
+                      N_FFT,
+                      hop_length=int(0.01*SAMPLE_RATE),
+                      win_length=int(0.030*SAMPLE_RATE),
+                      window=torch.hamming_window(int(0.030*SAMPLE_RATE)),
+                      center=False,
+                      normalized=False,
+                      onesided=True)
+    stft = (stft[:,:,0].pow(2) + stft[:,:,1].pow(2)).pow(0.5)
 
-    stft = (stft[:,:,0].pow(2) + stft[:,:,1].pow(2)).pow(0.5);
-    amag = stft.numpy();
-    feat = torch.FloatTensor(amag)
-    feat = torch.FloatTensor(feat).transpose(0, 1)
+    if use_mel_scale:
+        amag = stft.clone().detach()
+        amag = amag.view(-1, amag.shape[0], amag.shape[1])  # reshape spectrogram shape to [batch_size, time, frequency]
+        mel = melscale_pytorch.mel_scale(amag, sample_rate=SAMPLE_RATE, n_mels=N_FFT//2+1)  # melspec with same shape
+        if use_specaug and train_mode:
+            specaug_prob = 1  # augment probability
+            if numpy.random.uniform(0, 1) < specaug_prob:
+                # apply augment
+                mel = spec_augment_pytorch.spec_augment(mel, time_warping_para=80, frequency_masking_para=54,
+                                                time_masking_para=100, frequency_mask_num=1, time_mask_num=1)
+        feat = mel.view(mel.shape[1], mel.shape[2])  # squeeze back to [frequency, time]
+        feat = feat.transpose(0, 1).clone().detach()
+        del stft, amag, mel
+    else:
+        # use baseline feature
+        amag = stft.numpy()
+        feat = torch.FloatTensor(amag)
+        feat = torch.FloatTensor(feat).transpose(0, 1)
+        del stft, amag
 
     return feat
+
+def spec_augment_wrapper(mel, cfg_spec_augment):
+    aug_mel = spec_augment_pytorch.spec_augment(
+        mel, 
+        time_warping_para=cfg_spec_augment["time_warping_para"],
+        frequency_masking_para=cfg_spec_augment["frequency_masking_para"],
+        time_masking_para=cfg_spec_augment["time_masking_para"],
+        frequency_mask_num=cfg_spec_augment["frequency_mask_num"],
+        time_mask_num=cfg_spec_augment["time_mask_num"])
+    return aug_mel
 
 def get_script(filepath, bos_id, eos_id):
     key = filepath.split('/')[-1].split('.')[0]
@@ -76,11 +111,14 @@ def get_script(filepath, bos_id, eos_id):
     result.append(eos_id)
     return result
 
+
 class BaseDataset(Dataset):
-    def __init__(self, wav_paths, script_paths, bos_id=1307, eos_id=1308):
+    def __init__(self, cfg_data, wav_paths, script_paths, bos_id=1307, eos_id=1308, train_mode=False):
+        self.cfg_data = cfg_data
         self.wav_paths = wav_paths
         self.script_paths = script_paths
         self.bos_id, self.eos_id = bos_id, eos_id
+        self.train_mode = train_mode
 
     def __len__(self):
         return len(self.wav_paths)
@@ -89,9 +127,10 @@ class BaseDataset(Dataset):
         return len(self.wav_paths)
 
     def getitem(self, idx):
-        feat = get_spectrogram_feature(self.wav_paths[idx])
+        feat = get_spectrogram_feature(self.cfg_data, self.wav_paths[idx], train_mode=self.train_mode)
         script = get_script(self.script_paths[idx], self.bos_id, self.eos_id)
         return feat, script
+
 
 def _collate_fn(batch):
     def seq_length_(p):
@@ -126,6 +165,7 @@ def _collate_fn(batch):
         targets[x].narrow(0, 0, len(target)).copy_(torch.LongTensor(target))
 
     return seqs, targets, seq_lengths, target_lengths
+
 
 class BaseDataLoader(threading.Thread):
     def __init__(self, dataset, queue, batch_size, thread_id):
@@ -170,6 +210,7 @@ class BaseDataLoader(threading.Thread):
             batch = self.collate_fn(items)
             self.queue.put(batch)
         logger.debug('loader %d stop' % (self.thread_id))
+
 
 class MultiLoader():
     def __init__(self, dataset_list, queue, batch_size, worker_size):

@@ -106,4 +106,8 @@ venv.bak/
 # dataset
 train/
 train.tar
-.idea/
+
+# userdefined
+testspace.py
+.idea
+__pycache__
