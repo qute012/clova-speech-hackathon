@@ -56,7 +56,7 @@ def get_spectrogram_feature(cfg_data, filepath, train_mode=False):
     use_specaug = cfg_spec_augment["use"]
     
     (rate, width, sig) = wavio.readwav(filepath)
-    sig = wavio.trim(sig,threshold_attack=131, threshold_release=64)
+    sig = wavio.trim(sig,threshold_attack=3280, threshold_release=3280, attack_margin=1920, release_margin=1920)
     sig = sig.ravel()
     stft = torch.stft(torch.FloatTensor(sig),
                       N_FFT,
