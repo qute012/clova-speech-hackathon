@@ -421,7 +421,8 @@ def main():
                     eval__loss=eval_loss, eval__cer=eval_cer)
 
         best_model = (eval_loss < best_loss)
-        nsml.save(args.save_name)
+        save_name = "model_%03d"%(epoch)
+        nsml.save(save_name)
 
         if best_model:
             nsml.save('best')
