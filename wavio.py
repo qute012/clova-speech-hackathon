@@ -106,27 +106,3 @@ def writewav24(filename, rate, data):
     w.setframerate(rate)
     w.writeframes(wavdata)
     w.close()
-
-def trim(data, threshold_attack=3280, threshold_release=3280, attack_margin=1920, release_margin=1920):
-    data_size = len(data)
-    cut_head = 0
-    cut_tail = data_size
-    for sample in range(data_size):
-        sample_num = sample
-        sample_amp = data[sample_num][0]
-        if sample_amp>threshold_attack or sample_amp<-threshold_attack:
-            if sample_num > attack_margin:
-                cut_head = sample_num - attack_margin
-            else:
-                cut_head = 0
-            break
-    for sample in range(data_size):
-        sample_num = data_size-sample-1
-        sample_amp = data[sample_num][0]
-        if sample_amp>threshold_release or sample_amp<-threshold_release:
-            if sample_num + release_margin < data_size:
-                cut_tail = sample_num + release_margin
-            else:
-                cut_tail = data_size
-            break
-    return data[cut_head:cut_tail]

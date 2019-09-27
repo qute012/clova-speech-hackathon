@@ -27,7 +27,7 @@ import threading
 import logging
 from torch.utils.data import Dataset, DataLoader
 import numpy
-from specaugment import spec_augment_pytorch, melscale_pytorch
+from specaugment import spec_augment_pytorch, melscale_pytorch, trim
 
 
 logger = logging.getLogger('root')
@@ -56,8 +56,8 @@ def get_spectrogram_feature(cfg_data, filepath, train_mode=False):
     use_specaug = cfg_spec_augment["use"]
     
     (rate, width, sig) = wavio.readwav(filepath)
-    sig = wavio.trim(sig,threshold_attack=3280, threshold_release=3280, attack_margin=1920, release_margin=1920)
     sig = sig.ravel()
+    sig = trim.trim(sig)
     stft = torch.stft(torch.FloatTensor(sig),
                       N_FFT,
                       hop_length=int(0.01*SAMPLE_RATE),
