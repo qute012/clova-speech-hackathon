@@ -3,7 +3,13 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 
-def trim(data, threshold_attack=0.01, threshold_release=0.01, attack_margin=5000, release_margin=5000):
+def trim(data, cfg_trim):
+    
+    threshold_attack = cfg_trim["threshold_attack"]
+    threshold_release = cfg_trim["threshold_release"]
+    attack_margin = cfg_trim["attack_margin"]
+    release_margin = cfg_trim["release_margin"]
+
     data_size = len(data)
     cut_head = 0
     cut_tail = data_size

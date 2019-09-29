@@ -54,10 +54,14 @@ def get_spectrogram_feature(cfg_data, filepath, train_mode=False):
     use_mel_scale = cfg_data["use_mel_scale"]
     cfg_spec_augment = cfg_data["spec_augment"]
     use_specaug = cfg_spec_augment["use"]
+    cfg_trim = cfg_data["trim_silence"]
+    use_trim = cfg_trim["use"]
     
     (rate, width, sig) = wavio.readwav(filepath)
     sig = sig.ravel()
-    sig = trim.trim(sig, threshold_attack=0.01, threshold_release=0.01, attack_margin=5000, release_margin=5000)
+    #sig = trim.trim(sig, threshold_attack=0.01, threshold_release=0.01, attack_margin=5000, release_margin=5000)
+    if use_trim:
+        sig = trim.trim(sig, cfg_trim)
     stft = torch.stft(torch.FloatTensor(sig),
                       N_FFT,
                       hop_length=int(0.01*SAMPLE_RATE),
