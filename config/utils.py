@@ -13,6 +13,8 @@ def update_cfg(cfg):
     if cfg["config_version"] == 1:
         cfg = makeVer2(cfg)
     if cfg["config_version"] == 2:
+        cfg = makeVer3(cfg)
+    if cfg["config_version"] == 3:
         return cfg
     else:
         raise NotImplementedError # handle newer version
@@ -76,4 +78,12 @@ def makeVer2(old):
     cfg["max_epochs"] = old["max_epochs"]
     cfg["lr"] = old["lr"]
     cfg["teacher_forcing"] = old["teacher_forcing"]
+    return cfg
+
+def makeVer3(old):
+    cfg = old # incremental change
+    cfg["config_version"] = 3
+    trim = {}
+    trim["use"] = False
+    cfg["data"]["trim_silence"] = trim
     return cfg

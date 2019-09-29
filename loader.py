@@ -27,7 +27,7 @@ import threading
 import logging
 from torch.utils.data import Dataset, DataLoader
 import numpy
-from specaugment import spec_augment_pytorch, melscale_pytorch
+from specaugment import spec_augment_pytorch, melscale_pytorch, trim
 
 
 logger = logging.getLogger('root')
@@ -54,9 +54,14 @@ def get_spectrogram_feature(cfg_data, filepath, train_mode=False):
     use_mel_scale = cfg_data["use_mel_scale"]
     cfg_spec_augment = cfg_data["spec_augment"]
     use_specaug = cfg_spec_augment["use"]
+    cfg_trim = cfg_data["trim_silence"]
+    use_trim = cfg_trim["use"]
     
     (rate, width, sig) = wavio.readwav(filepath)
     sig = sig.ravel()
+    #sig = trim.trim(sig, threshold_attack=0.01, threshold_release=0.01, attack_margin=5000, release_margin=5000)
+    if use_trim:
+        sig = trim.trim(sig, cfg_trim)
     stft = torch.stft(torch.FloatTensor(sig),
                       N_FFT,
                       hop_length=int(0.01*SAMPLE_RATE),
@@ -76,16 +81,16 @@ def get_spectrogram_feature(cfg_data, filepath, train_mode=False):
             if numpy.random.uniform(0, 1) < specaug_prob:
                 # apply augment
                 mel = spec_augment_pytorch.spec_augment(mel, time_warping_para=80, frequency_masking_para=54,
-                                                time_masking_para=100, frequency_mask_num=1, time_mask_num=1)
+                                                time_masking_para=40, frequency_mask_num=1, time_mask_num=1)
         feat = mel.view(mel.shape[1], mel.shape[2])  # squeeze back to [frequency, time]
         feat = feat.transpose(0, 1).clone().detach()
-        del stft, amag, mel
+        del sig, stft, amag, mel
     else:
         # use baseline feature
         amag = stft.numpy()
         feat = torch.FloatTensor(amag)
         feat = torch.FloatTensor(feat).transpose(0, 1)
-        del stft, amag
+        del sig, stft, amag
 
     return feat
 
