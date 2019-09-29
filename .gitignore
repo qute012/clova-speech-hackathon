@@ -111,3 +111,4 @@ train.tar
 testspace.py
 .idea
 __pycache__
+automated_test.sh
