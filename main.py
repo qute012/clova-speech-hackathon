@@ -381,6 +381,7 @@ def main():
             script_paths.append(os.path.join(DATASET_PATH, 'train_data', script_path))
 
     best_loss = 1e10
+    best_cer = 1e10
     begin_epoch = 0
 
     # load all target scripts for reducing disk i/o
@@ -421,12 +422,16 @@ def main():
                     eval__loss=eval_loss, eval__cer=eval_cer)
 
         best_model = (eval_loss < best_loss)
+        best_cer = (eval_cer < best_cer)
         save_name = "model_%03d"%(epoch)
         nsml.save(save_name)
 
         if best_model:
             nsml.save('best')
             best_loss = eval_loss
+        if best_cer:
+            nsml.save('cer')
+            best_cer = eval_cer
 
 
 if __name__ == "__main__":
