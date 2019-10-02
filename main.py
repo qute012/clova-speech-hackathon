@@ -429,5 +429,102 @@ def main():
             best_loss = eval_loss
 
 
+def infer_only():
+
+    global char2index
+    global index2char
+    global SOS_token
+    global EOS_token
+    global PAD_token
+    
+    parser = argparse.ArgumentParser(description='Speech hackathon Baseline')
+
+    parser.add_argument('--no_cuda', action='store_true', default=False, help='disables CUDA training')
+    parser.add_argument('--seed', type=int, default=1, help='random seed (default: 1)')
+    parser.add_argument('--save_name', type=str, default='model', help='the name of model in nsml or local')
+    parser.add_argument('--mode', type=str, default='train')
+    parser.add_argument("--pause", type=int, default=0)
+    parser.add_argument('--config', type=str, default='./config/legacy/cfg0/baseline.cfg0.json')
+    args = parser.parse_args()
+    cfg = config.utils.read_cfg(args.config)
+
+    char2index, index2char = label_loader.load_label('./hackathon.labels')
+    SOS_token = char2index['<s>']
+    EOS_token = char2index['</s>']
+    PAD_token = char2index['_']
+
+    random.seed(args.seed)
+    torch.manual_seed(args.seed)
+    torch.cuda.manual_seed_all(args.seed)
+
+    args.cuda = not args.no_cuda and torch.cuda.is_available()
+    device = torch.device('cuda' if args.cuda else 'cpu')
+
+    # N_FFT: defined in loader.py
+    feature_size = N_FFT / 2 + 1
+
+    enc = EncoderRNN(
+            cfg["model"],
+            feature_size,
+            variable_lengths=False)
+
+    dec = DecoderRNN(
+            cfg["model"],
+            len(char2index),
+            SOS_token, EOS_token)
+
+    model = Seq2seq(enc, dec)
+    model.flatten_parameters()
+
+    for param in model.parameters():
+        param.data.uniform_(-0.08, 0.08)
+
+    model = nn.DataParallel(model).to(device)
+
+    optimizer = optim.Adam(model.module.parameters(), lr=cfg["lr"])
+    criterion = nn.CrossEntropyLoss(reduction='sum', ignore_index=PAD_token).to(device)
+
+    bind_model(cfg["data"], model, optimizer)
+
+    data_list = os.path.join(DATASET_PATH, 'train_data', 'data_list.csv')
+    wav_paths = list()
+    script_paths = list()
+
+    with open(data_list, 'r') as f:
+        for line in f:
+            # line: "aaa.wav,aaa.label"
+
+            wav_path, script_path = line.strip().split(',')
+            wav_paths.append(os.path.join(DATASET_PATH, 'train_data', wav_path))
+            script_paths.append(os.path.join(DATASET_PATH, 'train_data', script_path))
+
+    best_loss = 1e10
+    begin_epoch = 0
+
+    # load all target scripts for reducing disk i/o
+    target_path = os.path.join(DATASET_PATH, 'train_label')
+    load_targets(target_path)
+
+    train_batch_num, train_dataset_list, valid_dataset = split_dataset(cfg, wav_paths, script_paths, valid_ratio=0.05)
+
+    logger.info('start')
+
+    train_begin = time.time()
+
+    epoch = 0
+    valid_queue = queue.Queue(cfg["workers"] * 2)
+    valid_loader = BaseDataLoader(valid_dataset, valid_queue, cfg["batch_size"], 0)
+    valid_loader.start()
+
+    eval_loss, eval_cer = evaluate(model, valid_loader, valid_queue, criterion, device)
+    logger.info('Epoch %d (Evaluate) Loss %0.4f CER %0.4f' % (epoch, eval_loss, eval_cer))
+
+    valid_loader.join()
+
+    print("Now let's do somthing!")
+    pass
+
+
 if __name__ == "__main__":
-    main()
+    #main()
+    infer_only()
