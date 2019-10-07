@@ -144,6 +144,8 @@ class DecoderRNN(BaseRNN):
         if self.use_attention:
             ret_dict[DecoderRNN.KEY_ATTN_SCORE] = list()
 
+        print("debug: forward pass teacher forcing ratio = " + str(teacher_forcing_ratio))
+
         inputs, batch_size, max_length = self._validate_args(inputs, encoder_hidden, encoder_outputs,
                                                              function, teacher_forcing_ratio)
 
