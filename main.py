@@ -106,7 +106,7 @@ def get_distance(ref_labels, hyp_labels, display=False):
     return total_dist, total_length
 
 
-def train(model, total_batch_size, queue, criterion, optimizer, device, train_begin, train_loader_count, print_batch=5, teacher_forcing_ratio=1):
+def train(model, total_batch_size, queue, criterion, optimizer, device, train_begin, train_loader_count, print_batch=5, teacher_forcing_ratio=1.0):
     total_loss = 0.
     total_num = 0
     total_dist = 0
@@ -402,7 +402,16 @@ def main():
         train_loader = MultiLoader(train_dataset_list, train_queue, cfg["batch_size"], cfg["workers"])
         train_loader.start()
 
-        train_loss, train_cer = train(model, train_batch_num, train_queue, criterion, optimizer, device, train_begin, cfg["workers"], 10, cfg["teacher_forcing"])
+        # scheduled sampling
+        # ratio_s -> ratio_e (linear decreasing) -> maintain
+        # decreasing epoch-scale = n_epoch_ramp
+        n_epoch_ramp = 10
+        ratio_s = 0.25
+        ratio_e = 0
+        teacher_forcing_ratio = max(ratio_s - (ratio_s-ratio_e)*epoch/n_epoch_ramp, ratio_e)
+        print("Teacher forcing ratio = " + str(teacher_forcing_ratio))
+
+        train_loss, train_cer = train(model, train_batch_num, train_queue, criterion, optimizer, device, train_begin, cfg["workers"], 10, teacher_forcing_ratio)  # cfg["teacher_forcing"]
         logger.info('Epoch %d (Training) Loss %0.4f CER %0.4f' % (epoch, train_loss, train_cer))
 
         train_loader.join()
