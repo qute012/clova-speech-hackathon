@@ -429,15 +429,17 @@ def main():
                     step=epoch, train_epoch__loss=train_loss, train_epoch__cer=train_cer,
                     eval__loss=eval_loss, eval__cer=eval_cer)
 
-        best_model = (eval_loss < best_loss)
-        best_cer = (eval_cer < best_cer)
+		# save every epoch
         save_name = "model_%03d"%(epoch)
         nsml.save(save_name)
-
-        if best_model:
+        # save best loss model
+		is_best_loss = (eval_loss < best_loss)
+        if is_best_loss:
             nsml.save('best')
             best_loss = eval_loss
-        if best_cer:
+		# save best cer model
+        is_best_cer = (eval_cer < best_cer)
+        if is_best_cer:
             nsml.save('cer')
             best_cer = eval_cer
 
