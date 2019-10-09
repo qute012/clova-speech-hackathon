@@ -59,20 +59,20 @@ class Attention(nn.Module):
         super(Attention, self).__init__()
         self.linear_out = nn.Linear(dim*2, dim)
 
-        self.wc1 = nn.Linear(dim, dim/4)
-        self.wc2 = nn.Linear(dim, dim/4)
-        self.wc3 = nn.Linear(dim, dim/4)
-        self.wc4 = nn.Linear(dim, dim/4)
+        self.wc1 = nn.Linear(dim, dim//4)
+        self.wc2 = nn.Linear(dim, dim//4)
+        self.wc3 = nn.Linear(dim, dim//4)
+        self.wc4 = nn.Linear(dim, dim//4)
 
-        self.wo1 = nn.Linear(dim, dim/4)
-        self.wo2 = nn.Linear(dim, dim/4)
-        self.wo3 = nn.Linear(dim, dim/4)
-        self.wo4 = nn.Linear(dim, dim/4)
+        self.wo1 = nn.Linear(dim, dim//4)
+        self.wo2 = nn.Linear(dim, dim//4)
+        self.wo3 = nn.Linear(dim, dim//4)
+        self.wo4 = nn.Linear(dim, dim//4)
 
-        self.wk1 = nn.Linear(dim, dim/4)
-        self.wk2 = nn.Linear(dim, dim/4)
-        self.wk3 = nn.Linear(dim, dim/4)
-        self.wk4 = nn.Linear(dim, dim/4)
+        self.wk1 = nn.Linear(dim, dim//4)
+        self.wk2 = nn.Linear(dim, dim//4)
+        self.wk3 = nn.Linear(dim, dim//4)
+        self.wk4 = nn.Linear(dim, dim//4)
 
         self.attn_combine = nn.Linear(dim, dim)
 
@@ -121,6 +121,7 @@ class Attention(nn.Module):
         att2 = F.softmax(att2.view(-1, input_size), dim=1).view(batch_size, -1, input_size)
         att3 = F.softmax(att3.view(-1, input_size), dim=1).view(batch_size, -1, input_size)
         att4 = F.softmax(att4.view(-1, input_size), dim=1).view(batch_size, -1, input_size)
+        attn = torch.cat((att1, att2, att3, att4), dim=2)
 
         # (batch, out_len, in_len) * (batch, in_len, dim) -> (batch, out_len, dim)
         #mix = torch.bmm(attn, context)
