@@ -55,7 +55,7 @@ class BaseRNN(nn.Module):
         self.input_dropout_p = input_dropout_p
         self.input_dropout = nn.Dropout(p=input_dropout_p)
         if rnn_cell.lower() == 'lstm':
-            if False:
+            if True:
                 self.rnn_cell = nn.LSTM
             else:
                 self.rnn_cell = LayerNormLSTM
