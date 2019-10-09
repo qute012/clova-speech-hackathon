@@ -19,7 +19,7 @@ limitations under the License.
 
 """ A base class for RNN. """
 import torch.nn as nn
-from lstm import LayerNormLSTM
+from .lstm import LayerNormLSTM
 
 class BaseRNN(nn.Module):
     r"""
