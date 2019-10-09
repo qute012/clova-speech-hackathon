@@ -280,6 +280,7 @@ class LayerNormLSTM(LSTMcell):
                  input_size,
                  hidden_size,
                  bias=True,
+                 batch_first=True,
                  dropout=0.0,
                  dropout_method='pytorch',
                  ln_preact=True,
