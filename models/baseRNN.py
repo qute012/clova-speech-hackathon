@@ -19,7 +19,7 @@ limitations under the License.
 
 """ A base class for RNN. """
 import torch.nn as nn
-
+from lstm import LayerNormLSTM
 
 class BaseRNN(nn.Module):
     r"""
@@ -55,7 +55,10 @@ class BaseRNN(nn.Module):
         self.input_dropout_p = input_dropout_p
         self.input_dropout = nn.Dropout(p=input_dropout_p)
         if rnn_cell.lower() == 'lstm':
-            self.rnn_cell = nn.LSTM
+            if False:
+                self.rnn_cell = nn.LSTM
+            else:
+                self.rnn_cell = LayerNormLSTM
         elif rnn_cell.lower() == 'gru':
             self.rnn_cell = nn.GRU
         else:
