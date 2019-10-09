@@ -203,7 +203,7 @@ class LSTMcell(nn.Module):
             * semeniuta: uses SemeniutaLSTM's dropout
     """
 
-    def __init__(self, input_size, hidden_size, bias=True, dropout=0.0, dropout_method='pytorch'):
+    def __init__(self, input_size, hidden_size, batch_first=True, bias=True, dropout=0.0, dropout_method='pytorch'):
         super(LSTMcell, self).__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
