@@ -35,6 +35,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 import Levenshtein as Lev 
 from pympler.tracker import SummaryTracker
+from torch.optim.lr_scheduler import StepLR
 tracker = SummaryTracker()
 
 import label_loader
@@ -389,12 +390,13 @@ def main():
 
     train_batch_num, train_dataset_list, valid_dataset = split_dataset(cfg, wav_paths, script_paths, valid_ratio=0.05)
 
+    lr_scheduler = StepLR(optimizer, step_size=1, gamma=0.96)
+
     logger.info('start')
 
     train_begin = time.time()
-
     for epoch in range(begin_epoch, cfg["max_epochs"]):
-
+        lr_scheduler.step(epoch)
         tracker.print_diff()
 
         train_queue = queue.Queue(cfg["workers"] * 2)
