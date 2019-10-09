@@ -411,7 +411,6 @@ def main():
 		ratio_s = 0.25
 		ratio_e = 0
 		teacher_forcing_ratio = max(ratio_s - (ratio_s-ratio_e)*epoch/n_epoch_ramp, ratio_e)
-		print("debug: teacher forcing ratio = " + str(teacher_forcing_ratio))
 
 		train_loss, train_cer = train(model, train_batch_num, train_queue, criterion, optimizer, device, train_begin, cfg["workers"], 10, teacher_forcing_ratio)  # cfg["teacher_forcing"]
 		logger.info('Epoch %d (Training) Loss %0.4f CER %0.4f' % (epoch, train_loss, train_cer))
