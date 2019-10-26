@@ -322,6 +322,7 @@ def main():
 	parser = argparse.ArgumentParser(description='Speech hackathon Baseline')
 
 	parser.add_argument('--no_train', action='store_true', default=False)
+	parser.add_argument('--local', action='store_true', default=False)
 	parser.add_argument('--no_cuda', action='store_true', default=False, help='disables CUDA training')
 	parser.add_argument('--seed', type=int, default=1, help='random seed (default: 1)')
 	parser.add_argument('--save_name', type=str, default='model', help='the name of model in nsml or local')
@@ -368,7 +369,7 @@ def main():
 	criterion = nn.CrossEntropyLoss(reduction='sum', ignore_index=PAD_token).to(device)
 
 	bind_model(cfg["data"], model, optimizer)
-	if args.no_train:
+	if args.no_train and not args.local:
 		nsml.load(checkpoint='best',session="team161/sr-hack-2019-50000/78")
 
 	if args.pause == 1:
