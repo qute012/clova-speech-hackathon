@@ -206,12 +206,14 @@ class DecoderRNN(BaseRNN):
                 b_encoder_outputs = encoder_outputs[b, :, :].unsqueeze(dim=0).expand((beam_width, -1, -1))
 
                 # implement beam decoding here
+                hypothesis_beams = []
+                hypothesis_logits = []
 
                 # initialize beams
-                b_decoder_input = torch.Tensor([SOS_idx] * beam_width).view(beam_width, 1)
-                reduced_beams = torch.zeros((beam_width, max_length), dtype=torch.int64) # (BW, L)
+                b_decoder_input = torch.LongTensor([SOS_idx] * beam_width).view(beam_width, 1) # (BW, 1)
+                reduced_beams = torch.zeros((beam_width, max_length), dtype=torch.int64) # (BW, L), no SOS
                 reduced_logits = torch.zeros((beam_width, 1)) # (BW, 1)
-                reduced_beams[:, 0] = b_decoder_input
+
                 for di in range(max_length):
 
                     # obtain logits for each (beam, next token) pair
@@ -219,22 +221,32 @@ class DecoderRNN(BaseRNN):
                         b_decoder_input, b_decoder_hidden, b_encoder_outputs, function=function)
                     b_step_output = b_decoder_output.squeeze(1) # (BW, voc_size)
                     voc_size = b_step_output.size(1)
-                    
-                    expanded_logits = reduced_logits.expand((-1, voc_size)) # (BW, voc_size)
+
+                    # expand beams
+                    expanded_logits = reduced_logits.expand((-1, voc_size)).clone() # (BW, voc_size)
                     expanded_logits += b_step_output
-                    flat_logits = expanded_logits.view([-1, 1]) # (BW * voc_size, 1)
+                    expanded_beams = reduced_beams.unsqueeze(dim=1).expand((-1, voc_size, -1)).clone() # (BW, voc_size, L)
+                    all_next_tokens = torch.arange(voc_size).view((1, voc_size)).expand((beam_width, -1)) # (BW, voc_size)
+                    expanded_beams[:, :, di] = all_next_tokens
 
-                    # TODO: get flat idx, calculate new reduced beam and logits
+                    # pop expanded beams ending with EOS and add to hypothesis
+                    hypothesis_beams.append(expanded_beams[:, EOS_idx, :])
+                    hypothesis_logits.append(expanded_logits[:, EOS_idx])
+                    expanded_beams = expanded_beams[:, :EOS_idx, :]
+                    expanded_logits = expanded_logits[:, :EOS_idx]
 
-                    # is this necessary?
-                    expanded_beams = reduced_beams.unsqueeze(dim=1).expand((-1, voc_size, -1)) # (BW, voc_size, L)
+                    # leave only best beams
+                    flat_logits = expanded_logits.contiguous().view((-1, 1)) # (BW * (voc_size-1), 1)
+                    flat_beams = expanded_beams.contiguous().view((beam_width*(voc_size-1), max_length)) # (BW * (voc_size-1), L)
+                    _, flat_idx = torch.topk(flat_logits, beam_width, dim=0)
+                    reduced_beams = flat_beams[flat_idx, :].squeeze(dim=1)
+                    reduced_logits = flat_logits[flat_idx, :].squeeze(dim=1)
 
-                    #b_symbols = decode(di, b_step_output, b_step_attn)
-                    #b_decoder_input = b_symbols
-                    
+                    # prepare next iteration
+                    b_symbols = reduced_beams[:, di].unsqueeze(dim=1) # (BW, 1)
+                    b_decoder_input = b_symbols
 
-                best_seq = b_decoder_
-
+                
 
                 #best_seq = torch.Tensor([EOS_idx]).view(1, -1) # (b, L) dummy
 
