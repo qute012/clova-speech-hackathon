@@ -41,6 +41,7 @@ tracker = SummaryTracker()
 import label_loader
 from loader import *
 from models import EncoderRNN, DecoderRNN, Seq2seq
+from models.n_gram import n_gram_train, n_gram_infer
 
 import nsml
 from nsml import GPU_NUM, DATASET_PATH, DATASET_NAME, HAS_DATASET
@@ -60,13 +61,14 @@ if HAS_DATASET == False:
 
 DATASET_PATH = os.path.join(DATASET_PATH, 'train')
 
-from models.n_gram import n_gram_train, n_gram_infer
-print("Begin language model setup")
-LM = {}
-for n in range(5):
-	LM[n+2] = n_gram_train(os.path.join(DATASET_PATH, 'train_label'), n+2)
-del(n)
-print("LM setup complete")
+if USE_LM:
+	print("Begin language model setup")
+	max_n_gram_size = 10
+	n_gram_models = {}
+	for n in range(max_n_gram_size-1):
+		n_gram_models[n+2] = n_gram_train(os.path.join(DATASET_PATH, 'train_label'), n+2)
+		del(n)
+	print("LM setup complete")
 
 def label_to_string(labels):
 	if len(labels.shape) == 1:

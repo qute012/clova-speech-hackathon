@@ -87,7 +87,7 @@ def n_gram_infer(n_gram, qry):
 	p[np.where(p == 0)] = 1e-6
 	return p
 
-
+'''
 # examples
 #print(n_gram_train(label_file="train_label", n=2, example_nums=1))
 #print(n_gram_train(label_file="train_label", n=3, example_nums=1))
@@ -101,11 +101,11 @@ for n in range(max_n_gram_size-1):
 	LM[n+2] = n_gram_train('train_label', n+2)
 print("LM setup complete")
 
-pred = 818
+pred = 27
 seq = [pred]
 n = 2
 while(pred != 819):
-	n_gram_size = min(n, max_n_gram_size)
+	n_gram_size = min(n, 5)
 	subseq = seq[1-n_gram_size:]
 	n_gram = LM[n_gram_size]
 	p = n_gram_infer(n_gram, np.array(subseq))
@@ -113,3 +113,4 @@ while(pred != 819):
 	seq.append(pred)
 	n = n+1
 print(seq)
+'''
