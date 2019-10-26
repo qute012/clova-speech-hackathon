@@ -221,8 +221,9 @@ def evaluate(model, dataloader, queue, criterion, device):
 
 			model.module.flatten_parameters()
 			logit = model(feats, feat_lengths, scripts, teacher_forcing_ratio=0.0)
-
+			
 			logit = torch.stack(logit, dim=1).to(device)
+
 			y_hat = logit.max(-1)[1]
 
 			loss = criterion(logit.contiguous().view(-1, logit.size(-1)), target.contiguous().view(-1))
@@ -234,6 +235,10 @@ def evaluate(model, dataloader, queue, criterion, device):
 			total_dist += dist
 			total_length += length
 			total_sent_num += target.size(0)
+
+			if True:
+				print("break!")
+				break
 
 	logger.info('evaluate() completed')
 	return total_loss / total_num, total_dist / total_length
