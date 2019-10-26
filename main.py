@@ -54,12 +54,19 @@ EOS_token = 0
 PAD_token = 0
 
 if HAS_DATASET == False:
-	#DATASET_PATH = './train'
+	DATASET_PATH = './train'
 	#DATASET_PATH = './sample_dataset'
-	DATASET_PATH = '../data'
+	#DATASET_PATH = '../data'
 
 DATASET_PATH = os.path.join(DATASET_PATH, 'train')
 
+from models.n_gram import n_gram_train, n_gram_infer
+print("Begin language model setup")
+LM = {}
+for n in range(5):
+	LM[n+2] = n_gram_train(os.path.join(DATASET_PATH, 'train_label'), n+2)
+del(n)
+print("LM setup complete")
 
 def label_to_string(labels):
 	if len(labels.shape) == 1:

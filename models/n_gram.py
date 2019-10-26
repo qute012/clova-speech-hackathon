@@ -78,7 +78,7 @@ def n_gram_infer(n_gram, qry):
 	for i in range(819):
 		cnt = n_gram.get(qry_str + str(i+1), 0)
 		p[i] = cnt
-		if cnt != 0: print(qry_str + str(i+1) + " / " + str(cnt))
+		#if cnt != 0 : print(qry_str + str(i+1) + " / " + str(cnt))
 
 	# normalize
 	if p.sum(0) != 0:
@@ -94,5 +94,22 @@ def n_gram_infer(n_gram, qry):
 #print(n_gram_train(label_file="train_label", n=5, example_nums=5))
 #print(n_gram_train(label_file="train_label", n=6))
 
-#qry = np.array([304])
-#n_gram_infer(n_gram_train(label_file="train_label", n=2), qry)
+print("Begin language model setup")
+LM = {}
+max_n_gram_size = 10
+for n in range(max_n_gram_size-1):
+	LM[n+2] = n_gram_train('train_label', n+2)
+print("LM setup complete")
+
+pred = 818
+seq = [pred]
+n = 2
+while(pred != 819):
+	n_gram_size = min(n, max_n_gram_size)
+	subseq = seq[1-n_gram_size:]
+	n_gram = LM[n_gram_size]
+	p = n_gram_infer(n_gram, np.array(subseq))
+	pred = np.argmax(p)+1
+	seq.append(pred)
+	n = n+1
+print(seq)
