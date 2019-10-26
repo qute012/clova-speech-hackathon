@@ -24,7 +24,7 @@ def n_gram_train(label_file, n, example_nums=0):
 					dic_all[target_key] = 1
 				else:
 					dic_all[target_key] += 1
-				lines = label_file.readline()
+			lines = label_file.readline()
 		label_file.close()
 		return dic_all
 	else:
