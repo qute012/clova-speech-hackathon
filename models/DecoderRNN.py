@@ -210,7 +210,8 @@ class DecoderRNN(BaseRNN):
                 hypothesis_logits = []
 
                 # initialize beams
-                b_decoder_input = torch.LongTensor([SOS_idx] * beam_width, device=device).view(beam_width, 1) # (BW, 1)
+                b_decoder_input = torch.LongTensor([SOS_idx] * beam_width).view(beam_width, 1) # (BW, 1)
+                b_decoder_input = b_decoder_input.to(device)
                 reduced_beams = torch.zeros((beam_width, max_length), dtype=torch.int64) # (BW, L), no SOS
                 reduced_logits = torch.zeros((beam_width, 1)) # (BW, 1)
 
