@@ -401,7 +401,7 @@ def main():
 	load_targets(target_path)
 
 	if args.no_train:
-		train_batch_num, train_dataset_list, valid_dataset = split_dataset(cfg, wav_paths, script_paths, valid_ratio=0.0005)
+		train_batch_num, train_dataset_list, valid_dataset = split_dataset(cfg, wav_paths, script_paths, valid_ratio=0.05)
 	else:
 		train_batch_num, train_dataset_list, valid_dataset = split_dataset(cfg, wav_paths, script_paths, valid_ratio=0.05)
 

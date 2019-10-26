@@ -198,7 +198,7 @@ class DecoderRNN(BaseRNN):
 			SOS_idx = 818
 			EOS_idx = 819
 
-			beam_width = 2
+			beam_width = 4
 			output_sequence = torch.zeros((batch_size, max_length), dtype=torch.int64)	
 			for b in range(batch_size):
 				# for each data in a batch, expand to beam_width dimension
