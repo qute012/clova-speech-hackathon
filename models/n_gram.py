@@ -1,8 +1,9 @@
 import numpy as np
-
+import time
 
 def n_gram_train(label_file, n, example_nums=0):
 	label_file = open(label_file)
+
 	if example_nums == 0:
 		dic_all = {}
 		lines = label_file.readline()
@@ -52,9 +53,9 @@ def n_gram_train_helper(label_file, n, example_nums):
 				dic_all[target_key] = 1
 			else:
 				dic_all[target_key] +=1
-			lines = label_file.readline()
-		label_file.close()
-		return dic_all
+		lines = label_file.readline()
+	label_file.close()
+	return dic_all
 
 
 def n_gram_infer(n_gram, qry):
@@ -82,18 +83,16 @@ def n_gram_infer(n_gram, qry):
 	# normalize
 	if p.sum(0) != 0:
 		p = p/p.sum(0)
-
 	# smooth
 	p[np.where(p == 0)] = 1e-6
 	return p
 
 
 # examples
-print(n_gram_train(label_file="train_label", n=3, example_nums=1))
-print(n_gram_train(label_file="train_label", n=4, example_nums=1))
-print(n_gram_train(label_file="train_label", n=6, example_nums=30))
+#print(n_gram_train(label_file="train_label", n=2, example_nums=1))
+#print(n_gram_train(label_file="train_label", n=3, example_nums=1))
+#print(n_gram_train(label_file="train_label", n=5, example_nums=5))
+#print(n_gram_train(label_file="train_label", n=6))
 
-qry = np.array([519, 662, 749])
-n_gram = n_gram_train(label_file="train_label", n=4)
-p = n_gram_infer(n_gram, qry)
-print(p)
+#qry = np.array([304])
+#n_gram_infer(n_gram_train(label_file="train_label", n=2), qry)
