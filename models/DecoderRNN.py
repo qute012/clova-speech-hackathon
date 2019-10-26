@@ -33,7 +33,7 @@ if torch.cuda.is_available():
     import torch.cuda as device
 else:
     import torch as device
-
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class DecoderRNN(BaseRNN):
     r"""
@@ -202,8 +202,8 @@ class DecoderRNN(BaseRNN):
             output_sequence = torch.zeros((batch_size, max_length), dtype=torch.int64)
             for b in range(batch_size):
                 # for each data in a batch, expand to beam_width dimension
-                b_decoder_hidden = decoder_hidden[:, b, :].unsqueeze(dim=1).expand((-1, beam_width, -1))
-                b_encoder_outputs = encoder_outputs[b, :, :].unsqueeze(dim=0).expand((beam_width, -1, -1))
+                b_decoder_hidden = decoder_hidden[:, b, :].unsqueeze(dim=1).expand((-1, beam_width, -1)).contiguous()
+                b_encoder_outputs = encoder_outputs[b, :, :].unsqueeze(dim=0).expand((beam_width, -1, -1)).contiguous()
 
                 # implement beam decoding here
                 hypothesis_beams = []
@@ -220,7 +220,8 @@ class DecoderRNN(BaseRNN):
                     # obtain logits for each (beam, next token) pair
                     b_decoder_output, b_decoder_hidden, b_step_attn = self.forward_step(
                         b_decoder_input, b_decoder_hidden, b_encoder_outputs, function=function)
-                    b_step_output = b_decoder_output.squeeze(1) # (BW, voc_size)
+                    b_step_output.cpu()
+					b_step_output = b_decoder_output.squeeze(1) # (BW, voc_size)
                     voc_size = b_step_output.size(1)
 
                     # expand beams
