@@ -206,11 +206,43 @@ class DecoderRNN(BaseRNN):
                 b_encoder_outputs = encoder_outputs[b, :, :].unsqueeze(dim=0).expand((beam_width, -1, -1))
 
                 # implement beam decoding here
-                
 
-                best_seq = torch.Tensor([EOS_idx]).view(1, -1) # (b, L)
+                # initialize beams
+                b_decoder_input = torch.Tensor([SOS_idx] * beam_width).view(beam_width, 1)
+                reduced_beams = torch.zeros((beam_width, max_length), dtype=torch.int64) # (BW, L)
+                reduced_logits = torch.zeros((beam_width, 1)) # (BW, 1)
+                reduced_beams[:, 0] = b_decoder_input
+                for di in range(max_length):
+
+                    # obtain logits for each (beam, next token) pair
+                    b_decoder_output, b_decoder_hidden, b_step_attn = self.forward_step(
+                        b_decoder_input, b_decoder_hidden, b_encoder_outputs, function=function)
+                    b_step_output = b_decoder_output.squeeze(1) # (BW, voc_size)
+                    voc_size = b_step_output.size(1)
+                    
+                    expanded_logits = reduced_logits.expand((-1, voc_size)) # (BW, voc_size)
+                    expanded_logits += b_step_output
+                    flat_logits = expanded_logits.view([-1, 1]) # (BW * voc_size, 1)
+
+                    # TODO: get flat idx, calculate new reduced beam and logits
+
+                    # is this necessary?
+                    expanded_beams = reduced_beams.unsqueeze(dim=1).expand((-1, voc_size, -1)) # (BW, voc_size, L)
+
+                    #b_symbols = decode(di, b_step_output, b_step_attn)
+                    #b_decoder_input = b_symbols
+                    
+
+                best_seq = b_decoder_
+
+
+                #best_seq = torch.Tensor([EOS_idx]).view(1, -1) # (b, L) dummy
+
                 best_seq_len = best_seq.size(1)
                 output_sequence[b, :best_seq_len] = best_seq
+
+                print("break batch!")
+                break
 
         ret_dict[DecoderRNN.KEY_SEQUENCE] = sequence_symbols
         ret_dict[DecoderRNN.KEY_LENGTH] = lengths.tolist()
