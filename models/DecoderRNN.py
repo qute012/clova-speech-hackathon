@@ -199,10 +199,15 @@ class DecoderRNN(BaseRNN):
 			EOS_idx = 819
 
 			beam_width = 2
-			output_sequence = torch.zeros((batch_size, max_length), dtype=torch.int64)
+			output_sequence = torch.zeros((batch_size, max_length), dtype=torch.int64)	
 			for b in range(batch_size):
 				# for each data in a batch, expand to beam_width dimension
-				b_decoder_hidden = decoder_hidden[:, b, :].unsqueeze(dim=1).expand((-1, beam_width, -1)).contiguous()
+				if(type(decoder_hidden)==tuple):
+					b_decoder_hidden0 = decoder_hidden[0][:, b, :].unsqueeze(dim=1).expand((-1, beam_width, -1)).contiguous()
+					b_decoder_hidden1 = decoder_hidden[1][:, b, :].unsqueeze(dim=1).expand((-1, beam_width, -1)).contiguous()
+					b_decoder_hidden = (b_decoder_hidden0, b_decoder_hidden1)
+				else:
+					b_decoder_hidden = decoder_hidden[:, b, :].unsqueeze(dim=1).expand((-1, beam_width, -1)).contiguous()
 				b_encoder_outputs = encoder_outputs[b, :, :].unsqueeze(dim=0).expand((beam_width, -1, -1)).contiguous()
 
 				# implement beam decoding here
@@ -210,7 +215,8 @@ class DecoderRNN(BaseRNN):
 				hypothesis_logits = []
 
 				# initialize beams
-				b_decoder_input = torch.LongTensor([SOS_idx] * beam_width, device=device).view(beam_width, 1) # (BW, 1)
+				b_decoder_input = torch.LongTensor([SOS_idx] * beam_width).view(beam_width, 1) # (BW, 1)
+				b_decoder_input = b_decoder_input.to(device)
 				reduced_beams = torch.zeros((beam_width, max_length), dtype=torch.int64, device=device) # (BW, L), no SOS
 				reduced_logits = torch.zeros((beam_width, 1), device=device) # (BW, 1)
 
@@ -249,7 +255,7 @@ class DecoderRNN(BaseRNN):
 
 				hyp_beams = torch.cat(hypothesis_beams[1:], dim=0) # (num_hyps, L) exclude '</s>'
 				hyp_logits = torch.cat(hypothesis_logits[1:], dim=0) # (num_hyps)
-				hyp_lengths = torch.arange(1, max_length, device=device).unsqueeze(dim=1).expand((-1, beam_width)).contiguous().view(-1) # (num_hyps)
+				hyp_lengths = torch.arange(1, max_length, device=device, dtype=torch.float32).unsqueeze(dim=1).expand((-1, beam_width)).contiguous().view(-1) # (num_hyps)
 
 				best_seq = rescoring(hyp_beams, hyp_logits, hyp_lengths) # (1, L)
 				output_sequence[b, :] = best_seq
