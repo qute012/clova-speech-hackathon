@@ -362,6 +362,9 @@ def main():
 	for param in model.parameters():
 		param.data.uniform_(-0.08, 0.08)
 
+	if args.no_train:
+		model = nsml.load(checkpoint='best',session="team161/sr-hack-2019-50000/78") 
+
 	model = nn.DataParallel(model).to(device)
 
 	optimizer = optim.Adam(model.module.parameters(), lr=cfg["lr"])
