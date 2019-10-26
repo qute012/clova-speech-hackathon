@@ -210,17 +210,15 @@ class DecoderRNN(BaseRNN):
 				hypothesis_logits = []
 
 				# initialize beams
-				b_decoder_input = torch.LongTensor([SOS_idx] * beam_width).view(beam_width, 1) # (BW, 1)
-				b_decoder_input = b_decoder_input.to(device)
-				reduced_beams = torch.zeros((beam_width, max_length), dtype=torch.int64) # (BW, L), no SOS
-				reduced_logits = torch.zeros((beam_width, 1)) # (BW, 1)
+				b_decoder_input = torch.LongTensor([SOS_idx] * beam_width, device=device).view(beam_width, 1) # (BW, 1)
+				reduced_beams = torch.zeros((beam_width, max_length), dtype=torch.int64, device=device) # (BW, L), no SOS
+				reduced_logits = torch.zeros((beam_width, 1), device=device) # (BW, 1)
 
 				for di in range(max_length):
 
 					# obtain logits for each (beam, next token) pair
 					b_decoder_output, b_decoder_hidden, b_step_attn = self.forward_step(
 						b_decoder_input, b_decoder_hidden, b_encoder_outputs, function=function)
-					b_step_output.cpu()
 					b_step_output = b_decoder_output.squeeze(1) # (BW, voc_size)
 					voc_size = b_step_output.size(1)
 
@@ -228,7 +226,7 @@ class DecoderRNN(BaseRNN):
 					expanded_logits = reduced_logits.expand((-1, voc_size)).clone() # (BW, voc_size)
 					expanded_logits += b_step_output
 					expanded_beams = reduced_beams.unsqueeze(dim=1).expand((-1, voc_size, -1)).clone() # (BW, voc_size, L)
-					all_next_tokens = torch.arange(voc_size).view((1, voc_size)).expand((beam_width, -1)) # (BW, voc_size)
+					all_next_tokens = torch.arange(voc_size, device=device).view((1, voc_size)).expand((beam_width, -1)) # (BW, voc_size)
 					expanded_beams[:, :, di] = all_next_tokens
 
 					# pop expanded beams ending with EOS and add to hypothesis
@@ -251,13 +249,15 @@ class DecoderRNN(BaseRNN):
 
 				hyp_beams = torch.cat(hypothesis_beams[1:], dim=0) # (num_hyps, L) exclude '</s>'
 				hyp_logits = torch.cat(hypothesis_logits[1:], dim=0) # (num_hyps)
-				hyp_lengths = torch.arange(1, max_length).unsqueeze(dim=1).expand((-1, beam_width)).contiguous().view(-1) # (num_hyps)
+				hyp_lengths = torch.arange(1, max_length, device=device).unsqueeze(dim=1).expand((-1, beam_width)).contiguous().view(-1) # (num_hyps)
 
 				best_seq = rescoring(hyp_beams, hyp_logits, hyp_lengths) # (1, L)
 				output_sequence[b, :] = best_seq
 
 		ret_dict[DecoderRNN.KEY_SEQUENCE] = sequence_symbols
 		ret_dict[DecoderRNN.KEY_LENGTH] = lengths.tolist()
+
+		output_sequence = output_sequence.cpu()
 
 		return decoder_outputs, decoder_hidden, ret_dict, output_sequence
 
