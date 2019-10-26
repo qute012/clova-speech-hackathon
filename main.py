@@ -61,7 +61,7 @@ if HAS_DATASET == False:
 
 DATASET_PATH = os.path.join(DATASET_PATH, 'train')
 
-if USE_LM:
+if True or USE_LM:
 	print("Begin language model setup")
 	max_n_gram_size = 10
 	n_gram_models = {}
