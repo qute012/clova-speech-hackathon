@@ -362,15 +362,14 @@ def main():
 	for param in model.parameters():
 		param.data.uniform_(-0.08, 0.08)
 
-	if args.no_train:
-		model = nsml.load(checkpoint='best',session="team161/sr-hack-2019-50000/78") 
-
 	model = nn.DataParallel(model).to(device)
 
 	optimizer = optim.Adam(model.module.parameters(), lr=cfg["lr"])
 	criterion = nn.CrossEntropyLoss(reduction='sum', ignore_index=PAD_token).to(device)
 
 	bind_model(cfg["data"], model, optimizer)
+	if args.no_train:
+		nsml.load(checkpoint='best',session="team161/sr-hack-2019-50000/78")
 
 	if args.pause == 1:
 		nsml.paused(scope=locals())
