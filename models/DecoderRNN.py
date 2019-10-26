@@ -197,11 +197,20 @@ class DecoderRNN(BaseRNN):
             # beam decoding
             SOS_idx = 818
             EOS_idx = 819
-            
-            # implemement beam decoding! #
 
-            out_dummy = batch_size*[EOS_idx]
-            output_sequence = torch.Tensor(out_dummy).view((batch_size, -1))
+            beam_width = 5
+            output_sequence = torch.zeros((batch_size, max_length), dtype=torch.int64)
+            for b in range(batch_size):
+                # for each data in a batch, expand to beam_width dimension
+                b_decoder_hidden = decoder_hidden[:, b, :].unsqueeze(dim=1).expand((-1, beam_width, -1))
+                b_encoder_outputs = encoder_outputs[b, :, :].unsqueeze(dim=0).expand((beam_width, -1, -1))
+
+                # implement beam decoding here
+                
+
+                best_seq = torch.Tensor([EOS_idx]).view(1, -1) # (b, L)
+                best_seq_len = best_seq.size(1)
+                output_sequence[b, :best_seq_len] = best_seq
 
         ret_dict[DecoderRNN.KEY_SEQUENCE] = sequence_symbols
         ret_dict[DecoderRNN.KEY_LENGTH] = lengths.tolist()
@@ -257,3 +266,5 @@ class DecoderRNN(BaseRNN):
             max_length = inputs.size(1) - 1 # minus the start of sequence symbol
 
         return inputs, batch_size, max_length
+
+
