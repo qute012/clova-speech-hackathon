@@ -54,8 +54,9 @@ EOS_token = 0
 PAD_token = 0
 
 if HAS_DATASET == False:
-	DATASET_PATH = './train'
+	#DATASET_PATH = './train'
 	#DATASET_PATH = './sample_dataset'
+	DATASET_PATH = '../data'
 
 DATASET_PATH = os.path.join(DATASET_PATH, 'train')
 
@@ -315,6 +316,7 @@ def main():
 
 	parser = argparse.ArgumentParser(description='Speech hackathon Baseline')
 
+	parser.add_argument('--no_train', action='store_true', default=False)
 	parser.add_argument('--no_cuda', action='store_true', default=False, help='disables CUDA training')
 	parser.add_argument('--seed', type=int, default=1, help='random seed (default: 1)')
 	parser.add_argument('--save_name', type=str, default='model', help='the name of model in nsml or local')
@@ -388,7 +390,10 @@ def main():
 	target_path = os.path.join(DATASET_PATH, 'train_label')
 	load_targets(target_path)
 
-	train_batch_num, train_dataset_list, valid_dataset = split_dataset(cfg, wav_paths, script_paths, valid_ratio=0.05)
+	if args.no_train:
+		train_batch_num, train_dataset_list, valid_dataset = split_dataset(cfg, wav_paths, script_paths, valid_ratio=0.0005)
+	else:
+		train_batch_num, train_dataset_list, valid_dataset = split_dataset(cfg, wav_paths, script_paths, valid_ratio=0.05)
 
 	lr_scheduler = StepLR(optimizer, step_size=1, gamma=0.96)
 
@@ -396,35 +401,35 @@ def main():
 
 	train_begin = time.time()
 	for epoch in range(begin_epoch, cfg["max_epochs"]):
-		lr_scheduler.step(epoch)
-		tracker.print_diff()
-
-		train_queue = queue.Queue(cfg["workers"] * 2)
-
-		train_loader = MultiLoader(train_dataset_list, train_queue, cfg["batch_size"], cfg["workers"])
-		train_loader.start()
-
-		# scheduled sampling
-		# ratio_s -> ratio_e (linear decreasing) -> maintain
-		# decreasing epoch-scale = n_epoch_ramp
-		n_epoch_ramp = 10
-		ratio_s = 0.25
-		ratio_e = 0
-		teacher_forcing_ratio = max(ratio_s - (ratio_s-ratio_e)*epoch/n_epoch_ramp, ratio_e)
-
-		train_loss, train_cer = train(model, train_batch_num, train_queue, criterion, optimizer, device, train_begin, cfg["workers"], 10, teacher_forcing_ratio)  # cfg["teacher_forcing"]
-		logger.info('Epoch %d (Training) Loss %0.4f CER %0.4f' % (epoch, train_loss, train_cer))
-
-		train_loader.join()
+		print("epoch", epoch)
+		#tracker.print_diff()
+		if not args.no_train:
+			train_queue = queue.Queue(cfg["workers"] * 2)
+			train_loader = MultiLoader(train_dataset_list, train_queue, cfg["batch_size"], cfg["workers"])
+			train_loader.start()
+			# scheduled sampling
+			# ratio_s -> ratio_e (linear decreasing) -> maintain
+			# decreasing epoch-scale = n_epoch_ramp
+			n_epoch_ramp = 10
+			ratio_s = 0.25
+			ratio_e = 0
+			teacher_forcing_ratio = max(ratio_s - (ratio_s-ratio_e)*epoch/n_epoch_ramp, ratio_e)
+			train_loss, train_cer = train(model, train_batch_num, train_queue, criterion, optimizer, device, train_begin, cfg["workers"], 10, teacher_forcing_ratio)  # cfg["teacher_forcing"]
+			lr_scheduler.step(epoch)
+			logger.info('Epoch %d (Training) Loss %0.4f CER %0.4f' % (epoch, train_loss, train_cer))
+			train_loader.join()
 
 		valid_queue = queue.Queue(cfg["workers"] * 2)
 		valid_loader = BaseDataLoader(valid_dataset, valid_queue, cfg["batch_size"], 0)
 		valid_loader.start()
-
+		print("start eval")
 		eval_loss, eval_cer = evaluate(model, valid_loader, valid_queue, criterion, device)
 		logger.info('Epoch %d (Evaluate) Loss %0.4f CER %0.4f' % (epoch, eval_loss, eval_cer))
-
 		valid_loader.join()
+		print("end eval")
+
+		if args.no_train:
+			continue
 
 		nsml.report(False,
 					step=epoch, train_epoch__loss=train_loss, train_epoch__cer=train_cer,
