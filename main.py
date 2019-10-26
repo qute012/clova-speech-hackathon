@@ -236,10 +236,6 @@ def evaluate(model, dataloader, queue, criterion, device):
 			total_length += length
 			total_sent_num += target.size(0)
 
-			if True:
-				print("break!")
-				break
-
 	logger.info('evaluate() completed')
 	return total_loss / total_num, total_dist / total_length
 
