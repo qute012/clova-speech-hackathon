@@ -33,7 +33,7 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import torch.optim as optim
-import Levenshtein as Lev 
+import Levenshtein as Lev
 from pympler.tracker import SummaryTracker
 from torch.optim.lr_scheduler import StepLR
 tracker = SummaryTracker()
