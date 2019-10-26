@@ -198,7 +198,7 @@ class DecoderRNN(BaseRNN):
             SOS_idx = 818
             EOS_idx = 819
 
-            beam_width = 5
+            beam_width = 2
             output_sequence = torch.zeros((batch_size, max_length), dtype=torch.int64)
             for b in range(batch_size):
                 # for each data in a batch, expand to beam_width dimension
@@ -246,15 +246,13 @@ class DecoderRNN(BaseRNN):
                     b_symbols = reduced_beams[:, di].unsqueeze(dim=1) # (BW, 1)
                     b_decoder_input = b_symbols
 
-                
 
-                #best_seq = torch.Tensor([EOS_idx]).view(1, -1) # (b, L) dummy
+                hyp_beams = torch.cat(hypothesis_beams[1:], dim=0) # (num_hyps, L) exclude '</s>'
+                hyp_logits = torch.cat(hypothesis_logits[1:], dim=0) # (num_hyps)
+                hyp_lengths = torch.arange(1, max_length).unsqueeze(dim=1).expand((-1, beam_width)).contiguous().view(-1) # (num_hyps)
 
-                best_seq_len = best_seq.size(1)
-                output_sequence[b, :best_seq_len] = best_seq
-
-                print("break batch!")
-                break
+                best_seq = rescoring(hyp_beams, hyp_logits, hyp_lengths) # (1, L)
+                output_sequence[b, :] = best_seq
 
         ret_dict[DecoderRNN.KEY_SEQUENCE] = sequence_symbols
         ret_dict[DecoderRNN.KEY_LENGTH] = lengths.tolist()
@@ -311,4 +309,12 @@ class DecoderRNN(BaseRNN):
 
         return inputs, batch_size, max_length
 
+def rescoring(hyp_beams, hyp_logits, hyp_lengths):
+    # hyp_beams: (num_hyps, L)
+    # hyp_logits: (num_hyps)
+    # hyp_lengths: (num_hyps)
+    normalized_score = hyp_logits/hyp_lengths
+    _, idx = torch.topk(normalized_score, 1)
+    best_seq = hyp_beams[idx, :] # (1, L)
 
+    return best_seq 
