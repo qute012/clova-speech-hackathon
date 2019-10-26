@@ -58,6 +58,24 @@ class Attention(nn.Module):
     def __init__(self, dim):
         super(Attention, self).__init__()
         self.linear_out = nn.Linear(dim*2, dim)
+
+        self.wc1 = nn.Linear(dim, dim//4)
+        self.wc2 = nn.Linear(dim, dim//4)
+        self.wc3 = nn.Linear(dim, dim//4)
+        self.wc4 = nn.Linear(dim, dim//4)
+
+        self.wo1 = nn.Linear(dim, dim//4)
+        self.wo2 = nn.Linear(dim, dim//4)
+        self.wo3 = nn.Linear(dim, dim//4)
+        self.wo4 = nn.Linear(dim, dim//4)
+
+        self.wk1 = nn.Linear(dim, dim//4)
+        self.wk2 = nn.Linear(dim, dim//4)
+        self.wk3 = nn.Linear(dim, dim//4)
+        self.wk4 = nn.Linear(dim, dim//4)
+
+        self.attn_combine = nn.Linear(dim, dim)
+
         self.mask = None
 
     def set_mask(self, mask):
@@ -73,14 +91,47 @@ class Attention(nn.Module):
         batch_size = output.size(0)
         hidden_size = output.size(2)
         input_size = context.size(1)
+        
+        c1 = self.wc1(context)
+        c2 = self.wc2(context)
+        c3 = self.wc3(context)
+        c4 = self.wc4(context)
+        
+        o1 = self.wo1(output)
+        o2 = self.wo2(output)
+        o3 = self.wo3(output)
+        o4 = self.wo4(output)
+
         # (batch, out_len, dim) * (batch, in_len, dim) -> (batch, out_len, in_len)
-        attn = torch.bmm(output, context.transpose(1, 2))
+        #attn = torch.bmm(output, context.transpose(1, 2))
+        att1 = torch.bmm(o1, c1.transpose(1, 2))
+        att2 = torch.bmm(o2, c2.transpose(1, 2))
+        att3 = torch.bmm(o3, c3.transpose(1, 2))
+        att4 = torch.bmm(o4, c4.transpose(1, 2))
+
         if self.mask is not None:
-            attn.data.masked_fill_(self.mask, -float('inf'))
-        attn = F.softmax(attn.view(-1, input_size), dim=1).view(batch_size, -1, input_size)
+            #attn.data.masked_fill_(self.mask, -float('inf'))
+            att1.data.masked_fill_(self.mask, -float('inf'))
+            att2.data.masked_fill_(self.mask, -float('inf'))
+            att3.data.masked_fill_(self.mask, -float('inf'))
+            att4.data.masked_fill_(self.mask, -float('inf'))
+        
+        #attn = F.softmax(attn.view(-1, input_size), dim=1).view(batch_size, -1, input_size)
+        att1 = F.softmax(att1.view(-1, input_size), dim=1).view(batch_size, -1, input_size)
+        att2 = F.softmax(att2.view(-1, input_size), dim=1).view(batch_size, -1, input_size)
+        att3 = F.softmax(att3.view(-1, input_size), dim=1).view(batch_size, -1, input_size)
+        att4 = F.softmax(att4.view(-1, input_size), dim=1).view(batch_size, -1, input_size)
+        attn = torch.cat((att1, att2, att3, att4), dim=2)
 
         # (batch, out_len, in_len) * (batch, in_len, dim) -> (batch, out_len, dim)
-        mix = torch.bmm(attn, context)
+        #mix = torch.bmm(attn, context)
+        mix1 = torch.bmm(att1, c1)
+        mix2 = torch.bmm(att2, c2)
+        mix3 = torch.bmm(att3, c3)
+        mix4 = torch.bmm(att4, c4)
+
+        concat = torch.cat((mix1, mix2, mix3, mix4), dim=2)
+        mix = self.attn_combine(concat)
 
         # concat -> (batch, out_len, 2*dim)
         combined = torch.cat((mix, output), dim=2)
