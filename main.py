@@ -220,21 +220,27 @@ def evaluate(model, dataloader, queue, criterion, device):
 			target = scripts[:, 1:]
 
 			model.module.flatten_parameters()
-			logit = model(feats, feat_lengths, scripts, teacher_forcing_ratio=0.0)
-			
-			logit = torch.stack(logit, dim=1).to(device)
 
-			y_hat = logit.max(-1)[1]
+			USE_BEAM = True
 
-			loss = criterion(logit.contiguous().view(-1, logit.size(-1)), target.contiguous().view(-1))
-			total_loss += loss.item()
-			total_num += sum(feat_lengths)
+			if not USE_BEAM:
+				logit, _ = model(feats, feat_lengths, scripts, teacher_forcing_ratio=0.0, use_beam=USE_BEAM)
+				logit = torch.stack(logit, dim=1).to(device)
+				y_hat = logit.max(-1)[1]
+
+				loss = criterion(logit.contiguous().view(-1, logit.size(-1)), target.contiguous().view(-1))
+				total_loss += loss.item()
+				total_num += sum(feat_lengths)
+				total_sent_num += target.size(0)
+			else:
+				_, out_seq = model(feats, feat_lengths, scripts, teacher_forcing_ratio=0.0, use_beam=USE_BEAM)
+				y_hat = out_seq
+				total_num = 1
 
 			display = random.randrange(0, 100) == 0
 			dist, length = get_distance(target, y_hat, display=display)
 			total_dist += dist
 			total_length += length
-			total_sent_num += target.size(0)
 
 			if True:
 				print("break!")

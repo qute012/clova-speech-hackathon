@@ -139,7 +139,7 @@ class DecoderRNN(BaseRNN):
         return predicted_softmax, hidden, attn
 
     def forward(self, inputs=None, encoder_hidden=None, encoder_outputs=None,
-                    function=F.log_softmax, teacher_forcing_ratio=0):
+                    function=F.log_softmax, teacher_forcing_ratio=0, use_beam=False):
         ret_dict = dict()
         if self.use_attention:
             ret_dict[DecoderRNN.KEY_ATTN_SCORE] = list()
@@ -183,7 +183,8 @@ class DecoderRNN(BaseRNN):
                 else:
                     step_attn = None
                 decode(di, step_output, step_attn)
-        else:
+        elif not use_beam:
+            # greedy decoding
             decoder_input = inputs[:, 0].unsqueeze(1)
 
             for di in range(max_length):
@@ -192,11 +193,20 @@ class DecoderRNN(BaseRNN):
                 step_output = decoder_output.squeeze(1)
                 symbols = decode(di, step_output, step_attn)
                 decoder_input = symbols
+        else:
+            # beam decoding
+            SOS_idx = 818
+            EOS_idx = 819
+            
+            # implemement beam decoding! #
+
+            out_dummy = batch_size*[EOS_idx]
+            output_sequence = torch.Tensor(out_dummy).view((batch_size, -1))
 
         ret_dict[DecoderRNN.KEY_SEQUENCE] = sequence_symbols
         ret_dict[DecoderRNN.KEY_LENGTH] = lengths.tolist()
 
-        return decoder_outputs, decoder_hidden, ret_dict
+        return decoder_outputs, decoder_hidden, ret_dict, output_sequence
 
     def _init_state(self, encoder_hidden):
         """ Initialize the encoder hidden state. """
