@@ -326,7 +326,7 @@ def rescoring(hyp_beams, hyp_logits, hyp_lengths, ngram_models):
 	# hyp_lengths: (num_hyps)
 	num_hyps = list(hyp_beams.size())[0]
 	score = hyp_logits / hyp_lengths
-	ngram_w = 0.5
+	ngram_w = 0.2
 
 	use_ngram = (ngram_models is not None)
 	if use_ngram:
