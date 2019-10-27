@@ -61,14 +61,7 @@ if HAS_DATASET == False:
 
 DATASET_PATH = os.path.join(DATASET_PATH, 'train')
 
-if True or USE_LM:
-	print("Begin language model setup")
-	max_n_gram_size = 10
-	n_gram_models = {}
-	for n in range(max_n_gram_size-1):
-		n_gram_models[n+2] = n_gram_train(os.path.join(DATASET_PATH, 'train_label'), n+2)
-		del(n)
-	print("LM setup complete")
+
 
 def label_to_string(labels):
 	if len(labels.shape) == 1:
@@ -206,7 +199,7 @@ def train(model, total_batch_size, queue, criterion, optimizer, device, train_be
 train.cumulative_batch_count = 0
 
 
-def evaluate(model, dataloader, queue, criterion, device):
+def evaluate(model, dataloader, queue, criterion, device, ngram_models=None):
 	logger.info('evaluate() start')
 	total_loss = 0.
 	total_num = 0
@@ -233,7 +226,7 @@ def evaluate(model, dataloader, queue, criterion, device):
 			USE_BEAM = True
 
 			if not USE_BEAM:
-				logit, _ = model(feats, feat_lengths, scripts, teacher_forcing_ratio=0.0, use_beam=USE_BEAM)
+				logit, _ = model(feats, feat_lengths, scripts, teacher_forcing_ratio=0.0, use_beam=USE_BEAM, ngram_models=ngram_models)
 				logit = torch.stack(logit, dim=1).to(device)
 				y_hat = logit.max(-1)[1]
 
@@ -241,7 +234,7 @@ def evaluate(model, dataloader, queue, criterion, device):
 				total_loss += loss.item()
 				total_num += sum(feat_lengths)
 			else:
-				_, out_seq = model(feats, feat_lengths, scripts, teacher_forcing_ratio=0.0, use_beam=USE_BEAM)
+				_, out_seq = model(feats, feat_lengths, scripts, teacher_forcing_ratio=0.0, use_beam=USE_BEAM, ngram_models=ngram_models)
 				y_hat = out_seq
 				total_num = 1
 
@@ -255,7 +248,7 @@ def evaluate(model, dataloader, queue, criterion, device):
 	return total_loss / total_num, total_dist / total_length
 
 
-def bind_model(cfg_data, model, optimizer=None):
+def bind_model(cfg_data, model, optimizer=None, ngram_models=None):
 	def load(filename, **kwargs):
 		state = torch.load(os.path.join(filename, 'model.pt'))
 		model.load_state_dict(state['model'])
@@ -277,7 +270,7 @@ def bind_model(cfg_data, model, optimizer=None):
 		input = get_spectrogram_feature(cfg_data, wav_path).unsqueeze(0)
 		input = input.to(device)
 
-		logit = model(input_variable=input, input_lengths=None, teacher_forcing_ratio=0)
+		logit = model(input_variable=input, input_lengths=None, teacher_forcing_ratio=0, ngram_models=ngram_models)
 		logit = torch.stack(logit, dim=1).to(device)
 
 		y_hat = logit.max(-1)[1]
@@ -339,6 +332,7 @@ def main():
 	parser.add_argument('--save_name', type=str, default='model', help='the name of model in nsml or local')
 	parser.add_argument('--mode', type=str, default='train')
 	parser.add_argument("--pause", type=int, default=0)
+	parser.add_argument("--USE_LM", action='store_true', default=False)
 	parser.add_argument('--config', type=str, default='./config/legacy/cfg0/baseline.cfg0.json')
 	args = parser.parse_args()
 	cfg = config.utils.read_cfg(args.config)
@@ -355,6 +349,16 @@ def main():
 	args.cuda = not args.no_cuda and torch.cuda.is_available()
 	device = torch.device('cuda' if args.cuda else 'cpu')
 
+	if args.USE_LM:
+		print("Begin language model setup")
+		max_n_gram_size = 10
+		n_gram_models = {}
+		for n in range(max_n_gram_size-1):
+			n_gram_models[n+2] = n_gram_train(os.path.join(DATASET_PATH, 'train_label'), n+2)
+			del(n)
+		print("LM setup complete")
+
+    
 	# N_FFT: defined in loader.py
 	feature_size = N_FFT / 2 + 1
 
@@ -379,7 +383,7 @@ def main():
 	optimizer = optim.Adam(model.module.parameters(), lr=cfg["lr"])
 	criterion = nn.CrossEntropyLoss(reduction='sum', ignore_index=PAD_token).to(device)
 
-	bind_model(cfg["data"], model, optimizer)
+	bind_model(cfg["data"], model, optimizer, ngram_models)
 	if args.no_train and not args.local:
 		nsml.load(checkpoint='best',session="team161/sr-hack-2019-50000/78")
 
@@ -442,7 +446,7 @@ def main():
 		valid_loader = BaseDataLoader(valid_dataset, valid_queue, cfg["batch_size"], 0)
 		valid_loader.start()
 		print("start eval")
-		eval_loss, eval_cer = evaluate(model, valid_loader, valid_queue, criterion, device)
+		eval_loss, eval_cer = evaluate(model, valid_loader, valid_queue, criterion, device, ngram_models=ngram_models)
 		logger.info('Epoch %d (Evaluate) Loss %0.4f CER %0.4f' % (epoch, eval_loss, eval_cer))
 		valid_loader.join()
 		print("end eval")
