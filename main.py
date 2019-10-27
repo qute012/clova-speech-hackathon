@@ -270,10 +270,15 @@ def bind_model(cfg_data, model, optimizer=None, ngram_models=None):
 		input = get_spectrogram_feature(cfg_data, wav_path).unsqueeze(0)
 		input = input.to(device)
 
-		logit = model(input_variable=input, input_lengths=None, teacher_forcing_ratio=0, ngram_models=ngram_models)
-		logit = torch.stack(logit, dim=1).to(device)
+		USE_BEAM = True
+		if not USE_BEAM:
+			logit, _ = model(input_variable=input, input_lengths=None, teacher_forcing_ratio=0, use_beam=False, ngram_models=ngram_models)
+			logit = torch.stack(logit, dim=1).to(device)
+			y_hat = logit.max(-1)[1]
+		else:
+			_, out_seq = model(input_variable=input, input_lengths=None, teacher_forcing_ratio=0, use_beam=True, ngram_models=ngram_models)
+			y_hat = out_seq
 
-		y_hat = logit.max(-1)[1]
 		hyp = label_to_string(y_hat)
 
 		return hyp[0]
@@ -424,6 +429,8 @@ def main():
 	lr_scheduler = StepLR(optimizer, step_size=1, gamma=0.96)
 
 	logger.info('start')
+
+	nsml.save('notrain')
 
 	train_begin = time.time()
 	for epoch in range(begin_epoch, cfg["max_epochs"]):
