@@ -240,7 +240,6 @@ def evaluate(model, dataloader, queue, criterion, device):
 				loss = criterion(logit.contiguous().view(-1, logit.size(-1)), target.contiguous().view(-1))
 				total_loss += loss.item()
 				total_num += sum(feat_lengths)
-				total_sent_num += target.size(0)
 			else:
 				_, out_seq = model(feats, feat_lengths, scripts, teacher_forcing_ratio=0.0, use_beam=USE_BEAM)
 				y_hat = out_seq
