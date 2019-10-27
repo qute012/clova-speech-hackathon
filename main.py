@@ -348,11 +348,13 @@ def main():
 
 	args.cuda = not args.no_cuda and torch.cuda.is_available()
 	device = torch.device('cuda' if args.cuda else 'cpu')
+    
+	n_gram_models = None
 
 	if args.USE_LM:
 		print("Begin language model setup")
+		n_gram_models = {}        
 		max_n_gram_size = 10
-		n_gram_models = {}
 		for n in range(max_n_gram_size-1):
 			n_gram_models[n+2] = n_gram_train(os.path.join(DATASET_PATH, 'train_label'), n+2)
 			del(n)
