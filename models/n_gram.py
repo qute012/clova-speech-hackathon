@@ -100,7 +100,7 @@ def n_gram_p(n_gram_models, qry):
 
     p_arr = np.zeros((n, 819))
     for i in range(n):
-        if i+2 < 5:
+        if i+2 < 4:
             n_gram_size = i+2
             n_gram = n_gram_models[i+2]
         subseq = qry[i+2 - n_gram_size:i+1]  # x1...xn-1
