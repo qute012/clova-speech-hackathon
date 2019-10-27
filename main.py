@@ -55,9 +55,9 @@ EOS_token = 0
 PAD_token = 0
 
 if HAS_DATASET == False:
-	#DATASET_PATH = './train'
+	DATASET_PATH = './train'
 	#DATASET_PATH = './sample_dataset'
-	DATASET_PATH = '../data'
+	#DATASET_PATH = '../data'
 
 DATASET_PATH = os.path.join(DATASET_PATH, 'train')
 
@@ -250,10 +250,7 @@ def evaluate(model, dataloader, queue, criterion, device):
 			dist, length = get_distance(target, y_hat, display=display)
 			total_dist += dist
 			total_length += length
-<<<<<<< HEAD
-=======
 			total_sent_num += target.size(0)
->>>>>>> n-gram-language-model
 
 	logger.info('evaluate() completed')
 	return total_loss / total_num, total_dist / total_length
