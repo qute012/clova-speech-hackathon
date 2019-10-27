@@ -111,7 +111,7 @@ def n_gram_p(n_gram_models, qry):
     return logp
 
 
-
+'''
 # examples
 print(n_gram_train(label_file="train_label", n=2, example_nums=1))
 print(n_gram_train(label_file="train_label", n=3, example_nums=1))
@@ -138,9 +138,12 @@ while(pred != 819):
 	n = n+1
 print(seq)
 
+start = time.time()
 qry = np.array([27, 158, 130, 662, 621, 559, 15, 476, 662, 89, 480, 446, 662, 598, 620, 428, 661, 662, 819, 0, 0, 0, 0])
 logp = n_gram_p(n_gram_models, qry)
 print(logp)
+end = time.time()
+print(end - start)
 
 qry = np.array([27, 158, 130, 662, 621, 559, 15, 476, 662, 89, 480, 446, 662, 598, 620, 428, 661, 662, 1, 0, 0, 0, 0])
 logp = n_gram_p(n_gram_models, qry)
@@ -149,3 +152,5 @@ print(logp)
 qry = np.array([27, 158, 130, 662, 621, 559, 15, 476, 662, 89, 480, 446, 662, 819, 1, 1, 1, 1, 1, 0, 0, 0, 0])
 logp = n_gram_p(n_gram_models, qry)
 print(logp)
+'''
+
