@@ -35,6 +35,8 @@ else:
 	import torch as device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+from models.n_gram import n_gram_p
+
 class DecoderRNN(BaseRNN):
 	r"""
 	Provides functionality for decoding in a seq2seq framework, with an option for attention.
@@ -139,7 +141,7 @@ class DecoderRNN(BaseRNN):
 		return predicted_softmax, hidden, attn
 
 	def forward(self, inputs=None, encoder_hidden=None, encoder_outputs=None,
-					function=F.log_softmax, teacher_forcing_ratio=0, use_beam=False, ngram_models=ngram_models):
+					function=F.log_softmax, teacher_forcing_ratio=0, use_beam=False, ngram_models=None):
 		ret_dict = dict()
 		if self.use_attention:
 			ret_dict[DecoderRNN.KEY_ATTN_SCORE] = list()
@@ -321,13 +323,18 @@ def rescoring(hyp_beams, hyp_logits, hyp_lengths, ngram_models):
 	# hyp_beams: (num_hyps, L)
 	# hyp_logits: (num_hyps)
 	# hyp_lengths: (num_hyps)
+	num_hyps = list(hyp_beams.size())[0]
+	score = hyp_logits / hyp_lengths
+	ngram_w = 0.5
 
 	use_ngram = (ngram_models is not None)
 	if use_ngram:
-		raise NotImplementedError
-	else:
-		score = hyp_logits/hyp_lengths
-	
+		ngram_logits = np.zeros(num_hyps)
+		for i in range(num_hyps):
+			qry = np.array(hyp_beams[i, :]).squeeze()
+			ngram_logits[i] = n_gram_p(ngram_models, qry)
+		score = score*(1-ngram_w) + torch.from_numpy(ngram_logits)*ngram_w
+
 	_, idx = torch.topk(score, 1)
 	best_seq = hyp_beams[idx, :] # (1, L)
 

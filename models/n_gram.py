@@ -111,6 +111,7 @@ def n_gram_p(n_gram_models, qry):
 	logp = logp / n
 	return logp
 
+
 '''
 # examples
 print(n_gram_train(label_file="train_label", n=2, example_nums=1))
