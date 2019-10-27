@@ -333,7 +333,6 @@ def rescoring(hyp_beams, hyp_logits, hyp_lengths, ngram_models):
 		for i in range(num_hyps):
 			qry = hyp_beams[i, :].numpy().squeeze()
 			ngram_logits[i] = n_gram_p(ngram_models, qry)
-			print(ngram_logits[i])
 		score = score*(1-ngram_w) + torch.from_numpy(ngram_logits)*ngram_w
 		print(ngram_logits)
 
