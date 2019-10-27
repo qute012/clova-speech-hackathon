@@ -96,16 +96,15 @@ def n_gram_p(n_gram_models, qry):
     qry = qry[np.where(qry != 0)]
     n = qry.size
     qry = np.concatenate(([818], qry))
+    print(qry)
 
-    p_arr = np.zeros((819, n))
-    print(p_arr.size)
+    p_arr = np.zeros((n, 819))
     for i in range(n):
-        n_gram_size = min(i+2, 10)
-        n_gram = n_gram_models[n_gram_size]
+        if i+2 < 10:
+            n_gram = n_gram_models[i+2]
         subseq = qry[i+2 - n_gram_size:i+1]  # x1...xn-1
-        p_arr[:, i] = n_gram_infer(n_gram, subseq)  # p(xn | x1...xn-1)
-    print(p_arr.size)
-    p_arr = np.choose(qry - 1, p_arr)
+        p_arr[i, :] = n_gram_infer(n_gram, subseq)  # p(xn | x1...xn-1)
+    p_arr = p_arr[np.arange(p_arr.shape[0]), qry[1:]-1]
 
     logp = np.sum(np.log(p_arr)) / n
     return logp
