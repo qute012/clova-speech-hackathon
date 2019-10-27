@@ -13,5 +13,5 @@ nsml run -g $GPU_SIZE -c $CPU_SIZE -d $DATASET -a "--batch_size $BATCH_SIZE --wo
 NO_CONFIG
 
 # nsml run -g 1 -c 4 -d "sr-hack-2019-50000" -a "--config config/legacy/cfg0/baseline.cfg0.json"
-echo nsml run -g 3 -c 8 -d "sr-hack-2019-50000" -a "--config $1 $2"
-nsml run -g 1 -c 4 -d "sr-hack-2019-50000" -a "--config $1 $2"
+echo nsml run -g 3 -c 8 -d "sr-hack-2019-50000" -a "--config $1 $2 --USE_LM"
+nsml run -g 1 -c 4 -d "sr-hack-2019-50000" -a "--config $1 $2 --USE_LM"

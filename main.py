@@ -349,14 +349,14 @@ def main():
 	args.cuda = not args.no_cuda and torch.cuda.is_available()
 	device = torch.device('cuda' if args.cuda else 'cpu')
     
-	n_gram_models = None
+	ngram_models = None
 
 	if args.USE_LM:
 		print("Begin language model setup")
-		n_gram_models = {}        
+		ngram_models = {}        
 		max_n_gram_size = 10
 		for n in range(max_n_gram_size-1):
-			n_gram_models[n+2] = n_gram_train(os.path.join(DATASET_PATH, 'train_label'), n+2)
+			ngram_models[n+2] = n_gram_train(os.path.join(DATASET_PATH, 'train_label'), n+2)
 			del(n)
 		print("LM setup complete")
 
@@ -416,7 +416,8 @@ def main():
 	load_targets(target_path)
 
 	if args.no_train:
-		train_batch_num, train_dataset_list, valid_dataset = split_dataset(cfg, wav_paths, script_paths, valid_ratio=0.05)
+		train_batch_num, train_dataset_list, valid_dataset = split_dataset(cfg, wav_paths, script_paths,
+		valid_ratio=0.05)
 	else:
 		train_batch_num, train_dataset_list, valid_dataset = split_dataset(cfg, wav_paths, script_paths, valid_ratio=0.05)
 
