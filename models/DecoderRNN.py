@@ -331,9 +331,10 @@ def rescoring(hyp_beams, hyp_logits, hyp_lengths, ngram_models):
 	if use_ngram:
 		ngram_logits = np.zeros(num_hyps)
 		for i in range(num_hyps):
-			qry = np.array(hyp_beams[i, :]).squeeze()
+			qry = hyp_beams[i, :].numpy().squeeze()
 			ngram_logits[i] = n_gram_p(ngram_models, qry)
 		score = score*(1-ngram_w) + torch.from_numpy(ngram_logits)*ngram_w
+		print(ngram_logits)
 
 	_, idx = torch.topk(score, 1)
 	best_seq = hyp_beams[idx, :] # (1, L)
