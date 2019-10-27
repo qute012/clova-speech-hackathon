@@ -139,7 +139,7 @@ class DecoderRNN(BaseRNN):
 		return predicted_softmax, hidden, attn
 
 	def forward(self, inputs=None, encoder_hidden=None, encoder_outputs=None,
-					function=F.log_softmax, teacher_forcing_ratio=0, use_beam=False):
+					function=F.log_softmax, teacher_forcing_ratio=0, use_beam=False, ngram_models=ngram_models):
 		ret_dict = dict()
 		if self.use_attention:
 			ret_dict[DecoderRNN.KEY_ATTN_SCORE] = list()
@@ -257,7 +257,7 @@ class DecoderRNN(BaseRNN):
 				hyp_logits = torch.cat(hypothesis_logits[1:], dim=0) # (num_hyps)
 				hyp_lengths = torch.arange(1, max_length, device=device, dtype=torch.float32).unsqueeze(dim=1).expand((-1, beam_width)).contiguous().view(-1) # (num_hyps)
 
-				best_seq = rescoring(hyp_beams, hyp_logits, hyp_lengths) # (1, L)
+				best_seq = rescoring(hyp_beams, hyp_logits, hyp_lengths, ngram_models) # (1, L)
 				output_sequence[b, :] = best_seq
 
 		ret_dict[DecoderRNN.KEY_SEQUENCE] = sequence_symbols
@@ -317,12 +317,18 @@ class DecoderRNN(BaseRNN):
 
 		return inputs, batch_size, max_length
 
-def rescoring(hyp_beams, hyp_logits, hyp_lengths):
+def rescoring(hyp_beams, hyp_logits, hyp_lengths, ngram_models):
 	# hyp_beams: (num_hyps, L)
 	# hyp_logits: (num_hyps)
 	# hyp_lengths: (num_hyps)
-	normalized_score = hyp_logits/hyp_lengths
-	_, idx = torch.topk(normalized_score, 1)
+
+	use_ngram = (ngram_models is not None)
+	if use_ngram:
+		raise NotImplementedError
+	else:
+		score = hyp_logits/hyp_lengths
+	
+	_, idx = torch.topk(score, 1)
 	best_seq = hyp_beams[idx, :] # (1, L)
 
 	return best_seq 
