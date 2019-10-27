@@ -359,7 +359,7 @@ def main():
 	if args.USE_LM:
 		print("Begin language model setup")
 		ngram_models = {}        
-		max_n_gram_size = 10
+		max_n_gram_size = 5
 		for n in range(max_n_gram_size-1):
 			ngram_models[n+2] = n_gram_train(os.path.join(DATASET_PATH, 'train_label'), n+2)
 			del(n)
