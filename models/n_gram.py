@@ -59,10 +59,11 @@ def n_gram_train_helper(label_file, n, example_nums):
 
 
 def n_gram_infer(n_gram, qry):
-	# infer p(x_n | x_1 ... x_n-1)
-	# n_gram: dict, key: '111 222 333 444' -> val: 1
-	# qry: a numpy array of size(1,n-1)
-	# output p: a numpy array of size(w,1)
+	# infer p(xn | x1 ... xn-1)
+	# qry: x1...xn-1 as a numpy array of size(1,n-1)
+	# n_gram: dict
+	# key: x1...xn as '111 222 333 444' / val: 1
+	# output: p(xn | x1 ... xn-1) as a numpy array of size(w,1)
 
 	# erase zero padding
 	qry = qry[np.where(qry != 0)]
@@ -87,18 +88,41 @@ def n_gram_infer(n_gram, qry):
 	p[np.where(p == 0)] = 1e-6
 	return p
 
+
+def n_gram_p(n_gram_models, qry):
+	# infer p(x_1 ... x_n)
+	# n_gram_models: dict, key: 2 -> val: 2_gram
+	# qry: a numpy array of size(1,n)
+	# output p: sum(log p(x_1 ... x_i))
+
+	# erase zero padding and add sos
+	qry = qry[np.where(qry != 0)]
+	n = qry.size
+	qry = np.concatenate(([818], qry))
+
+	logp = 0
+	for i in range(n):
+		n_gram_size = min(i+2, 10)
+		n_gram = n_gram_models[n_gram_size]
+		subseq = qry[i+2 - n_gram_size:i+1]  # x1...xn-1
+		p = n_gram_infer(n_gram, subseq)[qry[i+1]-1]  # p(xn | x1...xn-1)
+		logp = logp + np.log(p)
+
+	logp = logp / n
+	return logp
+
 '''
 # examples
-#print(n_gram_train(label_file="train_label", n=2, example_nums=1))
-#print(n_gram_train(label_file="train_label", n=3, example_nums=1))
-#print(n_gram_train(label_file="train_label", n=5, example_nums=5))
-#print(n_gram_train(label_file="train_label", n=6))
+print(n_gram_train(label_file="train_label", n=2, example_nums=1))
+print(n_gram_train(label_file="train_label", n=3, example_nums=1))
+print(n_gram_train(label_file="train_label", n=5, example_nums=5))
+print(n_gram_train(label_file="train_label", n=6))
 
 print("Begin language model setup")
-LM = {}
+n_gram_models = {}
 max_n_gram_size = 10
 for n in range(max_n_gram_size-1):
-	LM[n+2] = n_gram_train('train_label', n+2)
+	n_gram_models[n+2] = n_gram_train('train_label', n+2)
 print("LM setup complete")
 
 pred = 27
@@ -107,10 +131,22 @@ n = 2
 while(pred != 819):
 	n_gram_size = min(n, 5)
 	subseq = seq[1-n_gram_size:]
-	n_gram = LM[n_gram_size]
+	n_gram = n_gram_models[n_gram_size]
 	p = n_gram_infer(n_gram, np.array(subseq))
 	pred = np.argmax(p)+1
 	seq.append(pred)
 	n = n+1
 print(seq)
+
+qry = np.array([27, 158, 130, 662, 621, 559, 15, 476, 662, 89, 480, 446, 662, 598, 620, 428, 661, 662, 819, 0, 0, 0, 0])
+logp = n_gram_p(n_gram_models, qry)
+print(logp)
+
+qry = np.array([27, 158, 130, 662, 621, 559, 15, 476, 662, 89, 480, 446, 662, 598, 620, 428, 661, 662, 1, 0, 0, 0, 0])
+logp = n_gram_p(n_gram_models, qry)
+print(logp)
+
+qry = np.array([27, 158, 130, 662, 621, 559, 15, 476, 662, 89, 480, 446, 662, 819, 1, 1, 1, 1, 1, 0, 0, 0, 0])
+logp = n_gram_p(n_gram_models, qry)
+print(logp)
 '''
